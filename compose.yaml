@@ -1,0 +1,38 @@
+services:
+  app:
+    image: localhost/myimages/sabotagecla6/flutter-dev
+
+    container_name: tenboo-web-dev
+    working_dir: /workspace
+
+    shm_size: "4g"
+
+    # デバイスを渡す場合
+    devices:
+      - "/dev/dri:/dev/dri"
+
+    # コンテナの実行ユーザー
+    user: "1000:1000"
+
+    # 環境変数
+    environment:
+      TZ: Asia/Tokyo
+      FLUTTER_SUPPRESS_ANALYTICS: "true"
+      DISPLAY: $DISPLAY
+      PULSE_SERVER: "unix:${XDG_RUNTIME_DIR}/pulse/native"
+
+    # 名前付きボリューム
+    volumes:
+      - source_code:/workspace
+      - flutter_cache:/home/dev/.pub-cache
+      - /tmp/.X11-unix/X0:/tmp/.X11-unix/X0:ro
+      - $HOME/.Xauthority:/tmp/.Xauthority
+      - ${XDG_RUNTIME_DIR}/pulse/native:${XDG_RUNTIME_DIR}/pulse/native
+      - "${HOME}/.config/pulse/cookie:/tmp/.config/pulse/cookie:ro"
+
+    tty: true
+    stdin_open: true
+
+volumes:
+  source_code:
+  flutter_cache:
