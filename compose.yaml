@@ -2,7 +2,7 @@ services:
   app:
     image: localhost/myimages/sabotagecla6/flutter-dev
 
-    container_name: tenboo-web-dev
+    container_name: tenbo-web-dev
     working_dir: /workspace
 
     shm_size: "4g"
@@ -33,6 +33,7 @@ services:
     tty: true
     stdin_open: true
 
+    command: code -w /workspace/tenbo-web/
 volumes:
   source_code:
   flutter_cache:
