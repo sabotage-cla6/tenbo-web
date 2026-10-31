@@ -1,6 +1,6 @@
 {
-    "name": "tenboo_web",
-    "short_name": "tenboo_web",
+    "name": "tenbo_web",
+    "short_name": "tenbo_web",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
