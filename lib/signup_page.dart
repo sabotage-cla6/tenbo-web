@@ -73,7 +73,7 @@ class _SignupPageState extends State<SignupPage> {
     final local = parts[0];
     final masked = local.length <= 2
         ? '${local[0]}*'
-        : '${local.substring(0, 2)}${'*' * (local.length - 2)}';
+        : '${local.substring(0, 2)}${List.filled(local.length - 2, '*').join()}';
     return '$masked@${parts[1]}';
   }
 
