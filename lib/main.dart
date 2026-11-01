@@ -1,13 +1,31 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 
+import 'firebase_config.dart';
 import 'signup_page.dart';
 
-void main() {
-  runApp(const TenboApp());
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  var firebaseReady = false;
+  if (FirebaseConfig.isConfigured) {
+    try {
+      await Firebase.initializeApp(options: FirebaseConfig.currentPlatform);
+      firebaseReady = true;
+    } on FirebaseException catch (error) {
+      debugPrint('Firebase initialization failed: ${error.code}');
+    } catch (error) {
+      debugPrint('Firebase initialization failed: $error');
+    }
+  }
+
+  runApp(TenboApp(firebaseReady: firebaseReady));
 }
 
 class TenboApp extends StatelessWidget {
-  const TenboApp({super.key});
+  const TenboApp({required this.firebaseReady, super.key});
+
+  final bool firebaseReady;
 
   @override
   Widget build(BuildContext context) {
@@ -23,7 +41,7 @@ class TenboApp extends StatelessWidget {
         ),
         scaffoldBackgroundColor: const Color(0xFFF7F5EF),
       ),
-      home: const SignupPage(),
+      home: SignupPage(firebaseReady: firebaseReady),
     );
   }
 }
