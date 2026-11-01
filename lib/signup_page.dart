@@ -1,7 +1,10 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 class SignupPage extends StatefulWidget {
-  const SignupPage({super.key});
+  const SignupPage({required this.firebaseReady, super.key});
+
+  final bool firebaseReady;
 
   @override
   State<SignupPage> createState() => _SignupPageState();
@@ -14,6 +17,7 @@ class _SignupPageState extends State<SignupPage> {
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
   bool _agreedToPolicies = false;
+  bool _isSubmitting = false;
 
   static const _ink = Color(0xFF18352E);
   static const _green = Color(0xFF245447);
@@ -44,7 +48,38 @@ class _SignupPageState extends State<SignupPage> {
     );
   }
 
-  void _submit() {
+  String _authErrorMessage(FirebaseAuthException error) {
+    switch (error.code) {
+      case 'email-already-in-use':
+        return 'このメールアドレスは既に登録されています。';
+      case 'invalid-email':
+        return 'メールアドレスの形式を確認してください。';
+      case 'weak-password':
+        return 'パスワードが安全ではありません。別のパスワードを設定してください。';
+      case 'operation-not-allowed':
+        return 'Firebase Consoleでメール/パスワード認証が有効になっていません。';
+      case 'network-request-failed':
+        return 'ネットワークに接続できません。通信環境を確認してください。';
+      case 'too-many-requests':
+        return '試行回数が多すぎます。しばらくしてから再度お試しください。';
+      default:
+        return 'アカウントを作成できませんでした。時間をおいて再度お試しください。';
+    }
+  }
+
+  String _maskEmail(String email) {
+    final parts = email.split('@');
+    if (parts.length != 2) return email;
+    final local = parts[0];
+    final masked = local.length <= 2
+        ? '${local[0]}*'
+        : '${local.substring(0, 2)}${'*' * (local.length - 2)}';
+    return '$masked@${parts[1]}';
+  }
+
+  Future<void> _submit() async {
+    if (_isSubmitting) return;
+
     final valid = _formKey.currentState?.validate() ?? false;
     if (!valid) return;
     if (!_agreedToPolicies) {
@@ -53,21 +88,67 @@ class _SignupPageState extends State<SignupPage> {
       );
       return;
     }
-    showDialog<void>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('入力内容を確認しました'),
-        content: const Text(
-          'サインアップ画面の動作確認が完了しました。現在は認証機能に接続していないため、アカウントは作成されません。',
+    if (!widget.firebaseReady) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Firebaseの設定が完了していません。READMEの設定手順を確認してください。'),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('閉じる'),
+      );
+      return;
+    }
+
+    setState(() => _isSubmitting = true);
+    try {
+      final credential = await FirebaseAuth.instance
+          .createUserWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      );
+      final user = credential.user;
+      if (user == null) {
+        throw FirebaseAuthException(
+          code: 'user-not-found',
+          message: 'User creation returned no user.',
+        );
+      }
+
+      await user.updateDisplayName(_nameController.text.trim());
+      await user.sendEmailVerification();
+
+      if (!mounted) return;
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('仮登録が完了しました'),
+          content: Text(
+            '${_maskEmail(_emailController.text.trim())} 宛てに確認メールを送信しました。'
+            'メール内のリンクを開いて、メールアドレスの確認を完了してください。',
           ),
-        ],
-      ),
-    );
+          actions: [
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('閉じる'),
+            ),
+          ],
+        ),
+      );
+      if (!mounted) return;
+      _passwordController.clear();
+    } on FirebaseAuthException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(_authErrorMessage(error))),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('登録処理中にエラーが発生しました。')),
+      );
+      debugPrint('Signup failed: $error');
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
   }
 
   InputDecoration _decoration(String label, IconData icon) {
@@ -160,8 +241,10 @@ class _SignupPageState extends State<SignupPage> {
                             controller: _nameController,
                             maxLength: 20,
                             textInputAction: TextInputAction.next,
-                            decoration: _decoration('プレイヤー名', Icons.person_outline)
-                                .copyWith(counterText: ''),
+                            decoration: _decoration(
+                              'プレイヤー名',
+                              Icons.person_outline,
+                            ).copyWith(counterText: ''),
                             validator: (value) {
                               if (value == null || value.trim().isEmpty) {
                                 return 'プレイヤー名を入力してください';
@@ -174,11 +257,15 @@ class _SignupPageState extends State<SignupPage> {
                             controller: _emailController,
                             keyboardType: TextInputType.emailAddress,
                             textInputAction: TextInputAction.next,
-                            decoration: _decoration('メールアドレス', Icons.mail_outline),
+                            decoration: _decoration(
+                              'メールアドレス',
+                              Icons.mail_outline,
+                            ),
                             validator: (value) {
                               final email = value?.trim() ?? '';
                               if (email.isEmpty) return 'メールアドレスを入力してください';
-                              if (!RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(email)) {
+                              if (!RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$')
+                                  .hasMatch(email)) {
                                 return '有効なメールアドレスを入力してください';
                               }
                               return null;
@@ -188,10 +275,14 @@ class _SignupPageState extends State<SignupPage> {
                           TextFormField(
                             controller: _passwordController,
                             obscureText: _obscurePassword,
-                            decoration: _decoration('パスワード（8文字以上）', Icons.lock_outline)
-                                .copyWith(
+                            decoration: _decoration(
+                              'パスワード（8文字以上）',
+                              Icons.lock_outline,
+                            ).copyWith(
                               suffixIcon: IconButton(
-                                tooltip: _obscurePassword ? 'パスワードを表示' : 'パスワードを隠す',
+                                tooltip: _obscurePassword
+                                    ? 'パスワードを表示'
+                                    : 'パスワードを隠す',
                                 icon: Icon(
                                   _obscurePassword
                                       ? Icons.visibility_outlined
@@ -227,26 +318,28 @@ class _SignupPageState extends State<SignupPage> {
                                   child: Wrap(
                                     crossAxisAlignment: WrapCrossAlignment.center,
                                     children: [
-                                      const Text(''),
                                       InkWell(
                                         onTap: () => _showPolicy('利用規約'),
                                         child: const Text(
                                           '利用規約',
                                           style: TextStyle(
                                             color: _green,
-                                            decoration: TextDecoration.underline,
+                                            decoration:
+                                                TextDecoration.underline,
                                             fontWeight: FontWeight.w600,
                                           ),
                                         ),
                                       ),
                                       const Text(' と '),
                                       InkWell(
-                                        onTap: () => _showPolicy('プライバシーポリシー'),
+                                        onTap: () =>
+                                            _showPolicy('プライバシーポリシー'),
                                         child: const Text(
                                           'プライバシーポリシー',
                                           style: TextStyle(
                                             color: _green,
-                                            decoration: TextDecoration.underline,
+                                            decoration:
+                                                TextDecoration.underline,
                                             fontWeight: FontWeight.w600,
                                           ),
                                         ),
@@ -262,7 +355,7 @@ class _SignupPageState extends State<SignupPage> {
                           SizedBox(
                             height: 52,
                             child: FilledButton(
-                              onPressed: _submit,
+                              onPressed: _isSubmitting ? null : _submit,
                               style: FilledButton.styleFrom(
                                 backgroundColor: _green,
                                 foregroundColor: Colors.white,
@@ -270,20 +363,31 @@ class _SignupPageState extends State<SignupPage> {
                                   borderRadius: BorderRadius.circular(14),
                                 ),
                               ),
-                              child: const Text(
-                                'アカウントを作成',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
+                              child: _isSubmitting
+                                  ? const SizedBox(
+                                      width: 22,
+                                      height: 22,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  : const Text(
+                                      'アカウントを作成',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
                             ),
                           ),
                           const SizedBox(height: 18),
-                          const Text(
-                            'すでにアカウントをお持ちの方は、ログイン機能の実装後にこちらからログインできます。',
+                          Text(
+                            widget.firebaseReady
+                                ? '登録後、入力したメールアドレスに確認メールを送信します。'
+                                : 'Firebase未設定のため、現在はアカウント登録できません。設定手順はREADMEを確認してください。',
                             textAlign: TextAlign.center,
-                            style: TextStyle(
+                            style: const TextStyle(
                               color: Colors.black54,
                               fontSize: 12,
                               height: 1.6,
