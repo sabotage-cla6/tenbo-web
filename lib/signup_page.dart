@@ -1,6 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import 'login_page.dart';
+
 class SignupPage extends StatefulWidget {
   const SignupPage({required this.firebaseReady, super.key});
 
@@ -114,6 +116,8 @@ class _SignupPageState extends State<SignupPage> {
 
       await user.updateDisplayName(_nameController.text.trim());
       await user.sendEmailVerification();
+      // アカウント作成直後は自動ログイン状態になるため、確認後はログイン画面へ戻します。
+      await FirebaseAuth.instance.signOut();
 
       if (!mounted) return;
       await showDialog<void>(
@@ -392,6 +396,17 @@ class _SignupPageState extends State<SignupPage> {
                               fontSize: 12,
                               height: 1.6,
                             ),
+                          ),
+                          const SizedBox(height: 8),
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pushReplacement(
+                              MaterialPageRoute<void>(
+                                builder: (_) => LoginPage(
+                                  firebaseReady: widget.firebaseReady,
+                                ),
+                              ),
+                            ),
+                            child: const Text('すでにアカウントをお持ちの方はこちら（ログイン）'),
                           ),
                         ],
                       ),

@@ -2,7 +2,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 
 import 'firebase_config.dart';
-import 'signup_page.dart';
+import 'auth_gate.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -41,7 +41,7 @@ class TenboApp extends StatelessWidget {
         ),
         scaffoldBackgroundColor: const Color(0xFFF7F5EF),
       ),
-      home: SignupPage(firebaseReady: firebaseReady),
+      home: AuthGate(firebaseReady: firebaseReady),
     );
   }
 }
