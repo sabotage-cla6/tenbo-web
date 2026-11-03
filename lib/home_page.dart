@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 
 const _menuInk = Color(0xFF18352E);
 const _menuGreen = Color(0xFF245447);
-const _menuGold = Color(0xFFD7B56D);
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -126,10 +125,7 @@ class HomePage extends StatelessWidget {
                     LayoutBuilder(
                       builder: (context, constraints) {
                         final wide = constraints.maxWidth >= 650;
-                        final primaryWidth = wide
-                            ? (constraints.maxWidth - 14) / 2
-                            : constraints.maxWidth;
-                        final secondaryWidth = wide
+                        final cardWidth = wide
                             ? (constraints.maxWidth - 14) / 2
                             : constraints.maxWidth;
                         return Wrap(
@@ -137,7 +133,7 @@ class HomePage extends StatelessWidget {
                           runSpacing: 14,
                           children: [
                             SizedBox(
-                              width: primaryWidth,
+                              width: cardWidth,
                               child: _MenuCard(
                                 icon: Icons.add_circle_outline,
                                 title: '卓を作成',
@@ -146,17 +142,16 @@ class HomePage extends StatelessWidget {
                               ),
                             ),
                             SizedBox(
-                              width: primaryWidth,
+                              width: cardWidth,
                               child: _MenuCard(
                                 icon: Icons.groups_outlined,
                                 title: '卓に参加',
                                 description: '参加コードなどを使って卓に加わります',
-                                primary: true,
                                 onTap: () => _showComingSoon(context, '卓への参加'),
                               ),
                             ),
                             SizedBox(
-                              width: secondaryWidth,
+                              width: cardWidth,
                               child: _MenuCard(
                                 icon: Icons.bar_chart,
                                 title: '成績を見る',
@@ -165,7 +160,7 @@ class HomePage extends StatelessWidget {
                               ),
                             ),
                             SizedBox(
-                              width: secondaryWidth,
+                              width: cardWidth,
                               child: _MenuCard(
                                 icon: Icons.person_outline,
                                 title: 'アカウント',
