@@ -116,6 +116,8 @@ class _SignupPageState extends State<SignupPage> {
 
       await user.updateDisplayName(_nameController.text.trim());
       await user.sendEmailVerification();
+      // アカウント作成直後は自動ログイン状態になるため、確認後はログイン画面へ戻します。
+      await FirebaseAuth.instance.signOut();
 
       if (!mounted) return;
       await showDialog<void>(
