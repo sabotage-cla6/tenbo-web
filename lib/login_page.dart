@@ -205,7 +205,112 @@ class _LoginPageState extends State<LoginPage> {
                             validator: (value) {
                               final email = value?.trim() ?? '';
                               if (email.isEmpty) return 'メールアドレスを入力してください';
-                              if (!RegExp(r'^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$')
+                              if (!RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+)
+                                  .hasMatch(email)) {
+                                return '有効なメールアドレスを入力してください';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: _passwordController,
+                            obscureText: _obscurePassword,
+                            textInputAction: TextInputAction.done,
+                            autofillHints: const [AutofillHints.password],
+                            onFieldSubmitted: (_) => _submit(),
+                            decoration: _decoration(
+                              'パスワード',
+                              Icons.lock_outline,
+                            ).copyWith(
+                              suffixIcon: IconButton(
+                                tooltip: _obscurePassword
+                                    ? 'パスワードを表示'
+                                    : 'パスワードを隠す',
+                                icon: Icon(
+                                  _obscurePassword
+                                      ? Icons.visibility_outlined
+                                      : Icons.visibility_off_outlined,
+                                ),
+                                onPressed: () => setState(
+                                  () => _obscurePassword = !_obscurePassword,
+                                ),
+                              ),
+                            ),
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'パスワードを入力してください';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 24),
+                          SizedBox(
+                            height: 52,
+                            child: FilledButton(
+                              onPressed: _isSubmitting ? null : _submit,
+                              style: FilledButton.styleFrom(
+                                backgroundColor: _green,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                              ),
+                              child: _isSubmitting
+                                  ? const SizedBox(
+                                      width: 22,
+                                      height: 22,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  : const Text(
+                                      'ログイン',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                            ),
+                          ),
+                          const SizedBox(height: 18),
+                          Text(
+                            widget.firebaseReady
+                                ? '登録済みのメールアドレスとパスワードでログインしてください。'
+                                : 'Firebase未設定のため、現在はログインできません。設定手順はREADMEを確認してください。',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              color: Colors.black54,
+                              fontSize: 12,
+                              height: 1.6,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pushReplacement(
+                              MaterialPageRoute<void>(
+                                builder: (_) => SignupPage(
+                                  firebaseReady: widget.firebaseReady,
+                                ),
+                              ),
+                            ),
+                            child: const Text('アカウントをお持ちでない方はこちら（新規登録）'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+)
                                   .hasMatch(email)) {
                                 return '有効なメールアドレスを入力してください';
                               }
