@@ -1,8 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
-import 'login_page.dart';
-
 class SignupPage extends StatefulWidget {
   const SignupPage({required this.firebaseReady, super.key});
 
@@ -394,17 +392,6 @@ class _SignupPageState extends State<SignupPage> {
                               fontSize: 12,
                               height: 1.6,
                             ),
-                          ),
-                          const SizedBox(height: 12),
-                          TextButton(
-                            onPressed: () => Navigator.of(context).push(
-                              MaterialPageRoute<void>(
-                                builder: (_) => LoginPage(
-                                  firebaseReady: widget.firebaseReady,
-                                ),
-                              ),
-                            ),
-                            child: const Text('すでにアカウントをお持ちの方はこちら（ログイン）'),
                           ),
                         ],
                       ),
