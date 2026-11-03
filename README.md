@@ -30,7 +30,6 @@ Firebase Webの設定値はクライアントアプリで利用する公開設�
 ## 現在の実装
 
 - サインアップ画面
-- ログイン画面（Firebase Authenticationのメールアドレス/パスワード認証）
 - プレイヤー名・メールアドレス・パスワードの入力チェック
 - Firebase Authenticationのメールアドレス/パスワード登録
 - Firebase Authプロフィールへのプレイヤー名保存
