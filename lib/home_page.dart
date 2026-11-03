@@ -1,6 +1,9 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+const _menuInk = Color(0xFF18352E);
+const _menuGreen = Color(0xFF245447);
+const _menuGold = Color(0xFFD7B56D);
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -254,8 +257,8 @@ class _MenuCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final background = primary ? _green : Colors.white;
-    final foreground = primary ? Colors.white : _ink;
+    final background = primary ? _menuGreen : Colors.white;
+    final foreground = primary ? Colors.white : _menuInk;
     final subtitle = primary ? Colors.white70 : Colors.black54;
 
     return Material(
@@ -275,7 +278,7 @@ class _MenuCard extends StatelessWidget {
             boxShadow: primary
                 ? [
                     BoxShadow(
-                      color: _green.withValues(alpha: 0.14),
+                      color: _menuGreen.withValues(alpha: 0.14),
                       blurRadius: 12,
                       offset: const Offset(0, 4),
                     ),
@@ -295,7 +298,7 @@ class _MenuCard extends StatelessWidget {
                 ),
                 child: Icon(
                   icon,
-                  color: primary ? _gold : _green,
+                  color: primary ? _menuGold : _menuGreen,
                   size: primary ? 30 : 26,
                 ),
               ),
