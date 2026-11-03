@@ -67,29 +67,9 @@ class _LoginPageState extends State<LoginPage> {
 
     setState(() => _isSubmitting = true);
     try {
-      final credential = await FirebaseAuth.instance.signInWithEmailAndPassword(
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text,
-      );
-
-      if (!mounted) return;
-      final displayName = credential.user?.displayName;
-      await showDialog<void>(
-        context: context,
-        builder: (dialogContext) => AlertDialog(
-          title: const Text('ログインしました'),
-          content: Text(
-            displayName == null || displayName.isEmpty
-                ? 'ログインに成功しました。'
-                : '$displayName さん、ログインに成功しました。',
-          ),
-          actions: [
-            FilledButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('閉じる'),
-            ),
-          ],
-        ),
       );
       if (!mounted) return;
       _passwordController.clear();
