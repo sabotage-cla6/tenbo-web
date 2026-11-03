@@ -385,13 +385,7 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                           const SizedBox(height: 12),
                           TextButton(
-                            onPressed: () => Navigator.of(context).pushReplacement(
-                              MaterialPageRoute<void>(
-                                builder: (_) => SignupPage(
-                                  firebaseReady: widget.firebaseReady,
-                                ),
-                              ),
-                            ),
+                            onPressed: () => Navigator.of(context).pop(),
                             child: const Text('アカウントをお持ちでない方はこちら（新規登録）'),
                           ),
                         ],
