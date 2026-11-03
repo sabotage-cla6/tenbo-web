@@ -76,7 +76,7 @@ class HomePage extends StatelessWidget {
             child: SingleChildScrollView(
               padding: const EdgeInsets.fromLTRB(24, 28, 24, 40),
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 1080),
+                constraints: const BoxConstraints(maxWidth: 920),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -90,16 +90,73 @@ class HomePage extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     const Text(
-                      '今日も楽しく、記録を積み重ねていきましょう。',
+                      'リアル麻雀の点棒管理を、もっと手軽に。',
                       style: TextStyle(color: Colors.black54, fontSize: 15),
                     ),
                     const SizedBox(height: 28),
-                    _WelcomeCard(
-                      onRecordTap: () => _showComingSoon(context, '対局記録'),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(28),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(22),
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF183B32), Color(0xFF34705C)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                      ),
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          final compact = constraints.maxWidth < 520;
+                          final message = Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'TENBO',
+                                style: TextStyle(
+                                  color: Color(0xFFE5CB91),
+                                  fontSize: 11,
+                                  letterSpacing: 2.5,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              const Text(
+                                '点棒のやり取りを、スマートに。',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              const Text(
+                                '麻雀牌を使ったリアルな対局で、点棒の受け渡しの代わりに天棒を使って得点を管理しましょう。',
+                                style: TextStyle(
+                                  color: Colors.white70,
+                                  height: 1.6,
+                                ),
+                              ),
+                            ],
+                          );
+                          if (compact) return message;
+                          return Row(
+                            children: [
+                              Expanded(child: message),
+                              const SizedBox(width: 24),
+                              const Icon(
+                                Icons.casino_outlined,
+                                size: 104,
+                                color: Color(0x66FFFFFF),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
                     ),
                     const SizedBox(height: 30),
                     const Text(
-                      'メニュー',
+                      '対局メニュー',
                       style: TextStyle(
                         color: _ink,
                         fontSize: 20,
@@ -109,37 +166,48 @@ class HomePage extends StatelessWidget {
                     const SizedBox(height: 14),
                     LayoutBuilder(
                       builder: (context, constraints) {
-                        final columns = constraints.maxWidth >= 700 ? 3 : 1;
-                        const spacing = 14.0;
-                        final itemWidth = columns == 1
-                            ? constraints.maxWidth
-                            : (constraints.maxWidth -
-                                    spacing * (columns - 1)) /
-                                columns;
+                        final wide = constraints.maxWidth >= 650;
+                        final primaryWidth = wide
+                            ? (constraints.maxWidth - 14) / 2
+                            : constraints.maxWidth;
+                        final secondaryWidth = wide
+                            ? (constraints.maxWidth - 14) / 2
+                            : constraints.maxWidth;
                         return Wrap(
-                          spacing: spacing,
-                          runSpacing: spacing,
+                          spacing: 14,
+                          runSpacing: 14,
                           children: [
                             SizedBox(
-                              width: itemWidth,
+                              width: primaryWidth,
                               child: _MenuCard(
-                                icon: Icons.edit_note,
-                                title: '対局を記録',
-                                description: '対局結果や点数を記録します',
-                                onTap: () => _showComingSoon(context, '対局記録'),
+                                icon: Icons.add_circle_outline,
+                                title: '卓を作成',
+                                description: '新しい卓を作って、対局を始めます',
+                                primary: true,
+                                onTap: () => _showComingSoon(context, '卓の作成'),
                               ),
                             ),
                             SizedBox(
-                              width: itemWidth,
+                              width: primaryWidth,
+                              child: _MenuCard(
+                                icon: Icons.groups_outlined,
+                                title: '卓に参加',
+                                description: '参加コードなどを使って卓に加わります',
+                                primary: true,
+                                onTap: () => _showComingSoon(context, '卓への参加'),
+                              ),
+                            ),
+                            SizedBox(
+                              width: secondaryWidth,
                               child: _MenuCard(
                                 icon: Icons.bar_chart,
                                 title: '成績を見る',
-                                description: '勝率や平均順位などを確認します',
+                                description: 'これまでの対局成績を確認します',
                                 onTap: () => _showComingSoon(context, '成績表示'),
                               ),
                             ),
                             SizedBox(
-                              width: itemWidth,
+                              width: secondaryWidth,
                               child: _MenuCard(
                                 icon: Icons.person_outline,
                                 title: 'アカウント',
@@ -151,56 +219,11 @@ class HomePage extends StatelessWidget {
                         );
                       },
                     ),
-                    const SizedBox(height: 30),
-                    const Text(
-                      '最近の対局',
-                      style: TextStyle(
-                        color: _ink,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 34,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: const Color(0xFFE5E1D7)),
-                      ),
-                      child: const Column(
-                        children: [
-                          Icon(
-                            Icons.inbox_outlined,
-                            size: 42,
-                            color: Color(0xFF9AA7A0),
-                          ),
-                          SizedBox(height: 12),
-                          Text(
-                            '対局記録はまだありません',
-                            style: TextStyle(
-                              color: _ink,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          SizedBox(height: 6),
-                          Text(
-                            '対局を記録すると、ここに最近の対局が表示されます。',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(color: Colors.black54),
-                          ),
-                        ],
-                      ),
-                    ),
                     const SizedBox(height: 28),
                     const Center(
                       child: Text(
-                        'TENBO  •  麻雀の記録を、もっと楽しく。',
+                        'TENBO  •  リアル麻雀の点棒管理を、もっと手軽に。',
+                        textAlign: TextAlign.center,
                         style: TextStyle(color: Colors.black45, fontSize: 12),
                       ),
                     ),
@@ -215,129 +238,67 @@ class HomePage extends StatelessWidget {
   }
 }
 
-class _WelcomeCard extends StatelessWidget {
-  const _WelcomeCard({required this.onRecordTap});
-
-  final VoidCallback onRecordTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(28),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(22),
-        gradient: const LinearGradient(
-          colors: [Color(0xFF183B32), Color(0xFF34705C)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final compact = constraints.maxWidth < 520;
-          final message = Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'YOUR MAHJONG LOG',
-                style: TextStyle(
-                  color: Color(0xFFE5CB91),
-                  fontSize: 11,
-                  letterSpacing: 2.5,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 10),
-              const Text(
-                '一局ずつ、成長の記録を。',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                '対局を記録して、自分の打ち筋や成績を振り返りましょう。',
-                style: TextStyle(color: Colors.white70, height: 1.6),
-              ),
-              const SizedBox(height: 20),
-              FilledButton.icon(
-                onPressed: onRecordTap,
-                style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFFE0C17F),
-                  foregroundColor: const Color(0xFF18352E),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 14,
-                  ),
-                ),
-                icon: const Icon(Icons.add),
-                label: const Text(
-                  '対局を記録する',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ),
-            ],
-          );
-
-          if (compact) return message;
-          return Row(
-            children: [
-              Expanded(child: message),
-              const SizedBox(width: 24),
-              const Icon(
-                Icons.casino_outlined,
-                size: 112,
-                color: Color(0x66FFFFFF),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-}
-
 class _MenuCard extends StatelessWidget {
   const _MenuCard({
     required this.icon,
     required this.title,
     required this.description,
     required this.onTap,
+    this.primary = false,
   });
 
   final IconData icon;
   final String title;
   final String description;
   final VoidCallback onTap;
+  final bool primary;
 
   @override
   Widget build(BuildContext context) {
+    final background = primary ? _green : Colors.white;
+    final foreground = primary ? Colors.white : _ink;
+    final subtitle = primary ? Colors.white70 : Colors.black54;
+
     return Material(
-      color: Colors.white,
+      color: background,
       borderRadius: BorderRadius.circular(18),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(18),
         child: Container(
-          constraints: const BoxConstraints(minHeight: 132),
+          constraints: BoxConstraints(minHeight: primary ? 150 : 116),
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: const Color(0xFFE5E1D7)),
+            border: Border.all(
+              color: primary ? const Color(0xFF34705C) : const Color(0xFFE5E1D7),
+            ),
+            boxShadow: primary
+                ? [
+                    BoxShadow(
+                      color: _green.withValues(alpha: 0.14),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ]
+                : null,
           ),
           child: Row(
             children: [
               Container(
-                width: 48,
-                height: 48,
+                width: primary ? 54 : 48,
+                height: primary ? 54 : 48,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFEAF0EB),
+                  color: primary
+                      ? Colors.white.withValues(alpha: 0.14)
+                      : const Color(0xFFEAF0EB),
                   borderRadius: BorderRadius.circular(14),
                 ),
-                child: Icon(icon, color: const Color(0xFF245447), size: 26),
+                child: Icon(
+                  icon,
+                  color: primary ? _gold : _green,
+                  size: primary ? 30 : 26,
+                ),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -347,17 +308,17 @@ class _MenuCard extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: const TextStyle(
-                        color: Color(0xFF18352E),
-                        fontSize: 16,
+                      style: TextStyle(
+                        color: foreground,
+                        fontSize: primary ? 19 : 16,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     const SizedBox(height: 5),
                     Text(
                       description,
-                      style: const TextStyle(
-                        color: Colors.black54,
+                      style: TextStyle(
+                        color: subtitle,
                         fontSize: 12,
                         height: 1.4,
                       ),
@@ -365,7 +326,10 @@ class _MenuCard extends StatelessWidget {
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right, color: Colors.black38),
+              Icon(
+                Icons.chevron_right,
+                color: primary ? Colors.white70 : Colors.black38,
+              ),
             ],
           ),
         ),
