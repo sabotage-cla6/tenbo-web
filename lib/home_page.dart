@@ -95,65 +95,22 @@ class HomePage extends StatelessWidget {
                       'リアル麻雀の点棒管理を、もっと手軽に。',
                       style: TextStyle(color: Colors.black54, fontSize: 15),
                     ),
-                    const SizedBox(height: 28),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(28),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(22),
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF183B32), Color(0xFF34705C)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
+                    const SizedBox(height: 24),
+                    const Text(
+                      '点棒のやり取りを、スマートに。',
+                      style: TextStyle(
+                        color: _ink,
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
                       ),
-                      child: LayoutBuilder(
-                        builder: (context, constraints) {
-                          final compact = constraints.maxWidth < 520;
-                          final message = Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'TENBO',
-                                style: TextStyle(
-                                  color: Color(0xFFE5CB91),
-                                  fontSize: 11,
-                                  letterSpacing: 2.5,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 10),
-                              const Text(
-                                '点棒のやり取りを、スマートに。',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              const Text(
-                                '麻雀牌を使ったリアルな対局で、点棒の受け渡しの代わりに天棒を使って得点を管理しましょう。',
-                                style: TextStyle(
-                                  color: Colors.white70,
-                                  height: 1.6,
-                                ),
-                              ),
-                            ],
-                          );
-                          if (compact) return message;
-                          return Row(
-                            children: [
-                              Expanded(child: message),
-                              const SizedBox(width: 24),
-                              const Icon(
-                                Icons.casino_outlined,
-                                size: 104,
-                                color: Color(0x66FFFFFF),
-                              ),
-                            ],
-                          );
-                        },
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      '麻雀牌を使ったリアルな対局で、点棒の受け渡しの代わりに天棒を使って得点を管理しましょう。',
+                      style: TextStyle(
+                        color: Colors.black54,
+                        fontSize: 14,
+                        height: 1.6,
                       ),
                     ),
                     const SizedBox(height: 30),
@@ -185,7 +142,6 @@ class HomePage extends StatelessWidget {
                                 icon: Icons.add_circle_outline,
                                 title: '卓を作成',
                                 description: '新しい卓を作って、対局を始めます',
-                                primary: true,
                                 onTap: () => _showComingSoon(context, '卓の作成'),
                               ),
                             ),
@@ -246,60 +202,41 @@ class _MenuCard extends StatelessWidget {
     required this.title,
     required this.description,
     required this.onTap,
-    this.primary = false,
   });
 
   final IconData icon;
   final String title;
   final String description;
   final VoidCallback onTap;
-  final bool primary;
 
   @override
   Widget build(BuildContext context) {
-    final background = primary ? _menuGreen : Colors.white;
-    final foreground = primary ? Colors.white : _menuInk;
-    final subtitle = primary ? Colors.white70 : Colors.black54;
-
     return Material(
-      color: background,
+      color: Colors.white,
       borderRadius: BorderRadius.circular(18),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(18),
         child: Container(
-          constraints: BoxConstraints(minHeight: primary ? 150 : 116),
+          constraints: const BoxConstraints(minHeight: 132),
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(
-              color: primary ? const Color(0xFF34705C) : const Color(0xFFE5E1D7),
-            ),
-            boxShadow: primary
-                ? [
-                    BoxShadow(
-                      color: _menuGreen.withValues(alpha: 0.14),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    ),
-                  ]
-                : null,
+            border: Border.all(color: const Color(0xFFE5E1D7)),
           ),
           child: Row(
             children: [
               Container(
-                width: primary ? 54 : 48,
-                height: primary ? 54 : 48,
+                width: 48,
+                height: 48,
                 decoration: BoxDecoration(
-                  color: primary
-                      ? Colors.white.withValues(alpha: 0.14)
-                      : const Color(0xFFEAF0EB),
+                  color: const Color(0xFFEAF0EB),
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Icon(
                   icon,
-                  color: primary ? _menuGold : _menuGreen,
-                  size: primary ? 30 : 26,
+                  color: _menuGreen,
+                  size: 26,
                 ),
               ),
               const SizedBox(width: 14),
@@ -311,8 +248,8 @@ class _MenuCard extends StatelessWidget {
                     Text(
                       title,
                       style: TextStyle(
-                        color: foreground,
-                        fontSize: primary ? 19 : 16,
+                        color: _menuInk,
+                        fontSize: 17,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -320,7 +257,7 @@ class _MenuCard extends StatelessWidget {
                     Text(
                       description,
                       style: TextStyle(
-                        color: subtitle,
+                        color: Colors.black54,
                         fontSize: 12,
                         height: 1.4,
                       ),
@@ -330,7 +267,7 @@ class _MenuCard extends StatelessWidget {
               ),
               Icon(
                 Icons.chevron_right,
-                color: primary ? Colors.white70 : Colors.black38,
+                color: Colors.black38,
               ),
             ],
           ),
