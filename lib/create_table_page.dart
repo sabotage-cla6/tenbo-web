@@ -137,7 +137,7 @@ class _CreateTablePageState extends State<CreateTablePage> {
                       TextField(controller: _uma[i],
                         keyboardType: const TextInputType.numberWithOptions(signed: true),
                         textAlign: TextAlign.center, decoration: _input()),
-                    ]))))),
+                    ])))))),
             ]),
             const SizedBox(height: 14),
             _Section(title: '積み棒設定', icon: Icons.stacked_bar_chart, children: [
@@ -149,7 +149,7 @@ class _CreateTablePageState extends State<CreateTablePage> {
             const SizedBox(height: 14),
             _Section(title: '精算設定', icon: Icons.calculate_outlined, children: [
               _RowSetting(title: '箱下精算', description: 'マイナス分も精算に反映',
-                control: Switch.adaptive(value: _belowZero, activeColor: _green,
+                control: Switch.adaptive(value: _belowZero, activeThumbColor: _green,
                   onChanged: (v) => setState(() => _belowZero = v))),
               _NumberRow(title: '飛び賞', controller: _tobi, unit: 'pt'),
               _NumberRow(title: '焼き鳥', controller: _yakitori, unit: 'pt'),
@@ -263,7 +263,7 @@ class _SelectRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) => _RowSetting(title: title, description: description,
     control: DropdownButtonFormField<String>(
-      value: value, isExpanded: true,
+      initialValue: value, isExpanded: true,
       decoration: InputDecoration(isDense: true, filled: true, fillColor: _paper,
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10),
@@ -273,7 +273,9 @@ class _SelectRow extends StatelessWidget {
       items: options.entries.map((e) => DropdownMenuItem(value: e.key,
         child: Text(e.value, overflow: TextOverflow.ellipsis,
           style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)))).toList(),
-      onChanged: (v) { if (v != null) onChanged(v); },
+      onChanged: (v) { if (v != null) {
+          onChanged(v);
+        } },
     ));
 }
 
