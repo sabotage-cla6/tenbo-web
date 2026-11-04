@@ -10,7 +10,6 @@ class HomePage extends StatelessWidget {
   const HomePage({super.key});
 
   static const _ink = Color(0xFF18352E);
-  static const _green = Color(0xFF245447);
   static const _gold = Color(0xFFD7B56D);
   static const _paper = Color(0xFFF7F5EF);
 
