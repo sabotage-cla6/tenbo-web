@@ -53,7 +53,7 @@ class _CreateTablePageState extends State<CreateTablePage> {
     final n = int.tryParse(value);
     setState(() {
       if (value.isEmpty) { _in.clear(); }
-      else if (n != null && n >= 0 && n <= 8) { _in.text = '\${n + 1}'; }
+      else if (n != null && n >= 0 && n <= 8) { _in.text = '${n + 1}'; }
     });
   }
 
@@ -132,7 +132,7 @@ class _CreateTablePageState extends State<CreateTablePage> {
                 child: Row(children: List.generate(_players == '4' ? 4 : 3, (i) =>
                   Expanded(child: Padding(padding: EdgeInsets.only(right: i == 3 ? 0 : 8),
                     child: Column(children: [
-                      Text('\${i + 1}着', style: const TextStyle(fontSize: 12, color: Colors.black54)),
+                      Text('${i + 1}着', style: const TextStyle(fontSize: 12, color: Colors.black54)),
                       const SizedBox(height: 6),
                       TextField(controller: _uma[i],
                         keyboardType: const TextInputType.numberWithOptions(signed: true),
