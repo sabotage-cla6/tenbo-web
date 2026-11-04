@@ -31,7 +31,7 @@ class _CreateTablePageState extends State<CreateTablePage> {
   String _umaType = '10-30';
   String _multiRon = 'head-bump';
   String _rounding = 'round';
-  bool _belowZero = true;
+  bool _allowNegativePoints = true;
   bool _saving = false;
 
   @override
@@ -85,7 +85,7 @@ class _CreateTablePageState extends State<CreateTablePage> {
           'uma': uma.cast<int>(),
           'honbaPoints': stack,
           'multiRon': _multiRon,
-          'belowZero': _belowZero,
+          'allowNegativePoints': _allowNegativePoints,
           'tobiPoints': tobi,
           'yakitoriPoints': yakitori,
           'rounding': _rounding,
@@ -215,8 +215,8 @@ class _CreateTablePageState extends State<CreateTablePage> {
                   const SizedBox(height: 14),
                   _Section(title: '精算設定', icon: Icons.calculate_outlined, children: [
                     _RowSetting(title: '箱下精算', description: 'マイナス分も精算に反映',
-                      control: Switch.adaptive(value: _belowZero, activeThumbColor: _green,
-                        onChanged: (v) => setState(() => _belowZero = v))),
+                      control: Switch.adaptive(value: _allowNegativePoints, activeThumbColor: _green,
+                        onChanged: (v) => setState(() => _allowNegativePoints = v))),
                     _NumberRow(title: '飛び賞', controller: _tobi, unit: 'pt'),
                     _NumberRow(title: '焼き鳥', controller: _yakitori, unit: 'pt'),
                     _SelectRow(title: '端数処理', description: 'ポイント計算時の丸め方式',
