@@ -1,6 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import 'create_table_page.dart';
+
 const _menuInk = Color(0xFF18352E);
 const _menuGreen = Color(0xFF245447);
 
@@ -8,7 +10,6 @@ class HomePage extends StatelessWidget {
   const HomePage({super.key});
 
   static const _ink = Color(0xFF18352E);
-  static const _green = Color(0xFF245447);
   static const _gold = Color(0xFFD7B56D);
   static const _paper = Color(0xFFF7F5EF);
 
@@ -138,7 +139,11 @@ class HomePage extends StatelessWidget {
                                 icon: Icons.add_circle_outline,
                                 title: '卓を作成',
                                 description: '新しい卓を作って、対局を始めます',
-                                onTap: () => _showComingSoon(context, '卓の作成'),
+                                onTap: () => Navigator.of(context).push(
+                                  MaterialPageRoute<void>(
+                                    builder: (_) => const CreateTablePage(),
+                                  ),
+                                ),
                               ),
                             ),
                             SizedBox(
