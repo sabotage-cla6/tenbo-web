@@ -9,9 +9,11 @@ service cloud.firestore {
       allow create: if signedIn()
         && request.resource.data.ownerUid == request.auth.uid;
 
-      // ログイン済みユーザーは、参加者募集中の卓を検索・閲覧できる。
-      allow get, list: if signedIn()
-        && (resource.data.ownerUid == request.auth.uid
+      // 卓IDを指定した単一ドキュメントの取得のみ許可する。
+      // 存在しないIDもアプリ側で「見つからない」と判定できるようにする。
+      allow get: if signedIn()
+        && (resource == null
+          || resource.data.ownerUid == request.auth.uid
           || resource.data.status == 'waiting');
 
       // 卓の更新・削除は引き続きオーナーだけに許可する。
