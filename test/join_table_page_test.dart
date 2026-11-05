@@ -6,14 +6,14 @@ import 'package:tenbo_web/table_repository.dart';
 
 void main() {
   group('JoinTablePage', () {
-    testWidgets('卓名が空なら検索せず入力を促す', (tester) async {
+    testWidgets('卓IDが空なら検索せず入力を促す', (tester) async {
       var searched = false;
       await tester.pumpWidget(
         MaterialApp(
           home: JoinTablePage(
-            findTablesByName: (_) async {
+            findTableById: (_) async {
               searched = true;
-              return [];
+              return null;
             },
           ),
         ),
@@ -23,34 +23,32 @@ void main() {
       await tester.pump();
 
       expect(searched, isFalse);
-      expect(find.text('卓の名称を入力してください。'), findsOneWidget);
+      expect(find.text('卓IDを入力してください。'), findsOneWidget);
     });
 
-    testWidgets('卓名が一致したら取得した卓情報でロビーへ遷移する',
+    testWidgets('卓IDが一致したら取得した卓情報でロビーへ遷移する',
         (tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: JoinTablePage(
-            findTablesByName: (name) async {
-              expect(name, '金曜夜セット麻雀');
-              return [
-                const TableInfo(
-                  id: 'table-123',
-                  name: '金曜夜セット麻雀',
-                  ownerName: '作成者',
-                  playerCount: 4,
-                  settings: {
-                    'startingPoints': 25000,
-                    'returnPoints': 30000,
-                  },
-                ),
-              ];
+            findTableById: (tableId) async {
+              expect(tableId, 'table-123');
+              return const TableInfo(
+                id: 'table-123',
+                name: '金曜夜セット麻雀',
+                ownerName: '作成者',
+                playerCount: 4,
+                settings: {
+                  'startingPoints': 25000,
+                  'returnPoints': 30000,
+                },
+              );
             },
           ),
         ),
       );
 
-      await tester.enterText(find.byType(TextField), '  金曜夜セット麻雀  ');
+      await tester.enterText(find.byType(TextField), '  table-123  ');
       await tester.tap(find.text('卓に参加する'));
       await tester.pumpAndSettle();
 
@@ -64,61 +62,21 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: JoinTablePage(
-            findTablesByName: (_) async => [],
+            findTableById: (_) async => null,
           ),
         ),
       );
 
-      await tester.enterText(find.byType(TextField), '存在しない卓');
+      await tester.enterText(find.byType(TextField), 'unknown-table-id');
       await tester.tap(find.text('卓に参加する'));
       await tester.pump();
 
       expect(find.byType(JoinTablePage), findsOneWidget);
       expect(find.byType(TableLobbyPage), findsNothing);
       expect(
-        find.text('参加できる卓が見つかりません。卓名を確認してください。'),
+        find.text('参加できる卓が見つかりません。卓IDを確認してください。'),
         findsOneWidget,
       );
     });
-
-    testWidgets('同名の参加可能な卓が複数ある場合はロビーへ遷移しない',
-        (tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: JoinTablePage(
-            findTablesByName: (_) async => [
-              const TableInfo(
-                id: 'table-123',
-                name: '重複卓',
-                ownerName: '作成者A',
-                playerCount: 4,
-                settings: {},
-              ),
-              const TableInfo(
-                id: 'table-456',
-                name: '重複卓',
-                ownerName: '作成者B',
-                playerCount: 4,
-                settings: {},
-              ),
-            ],
-          ),
-        ),
-      );
-
-      await tester.enterText(find.byType(TextField), '重複卓');
-      await tester.tap(find.text('卓に参加する'));
-      await tester.pump();
-
-      expect(find.byType(JoinTablePage), findsOneWidget);
-      expect(find.byType(TableLobbyPage), findsNothing);
-      expect(
-        find.text(
-          '同じ名称で参加可能な卓が複数あります。卓名を変更してもらうか、管理者に確認してください。',
-        ),
-        findsOneWidget,
-      );
-    });
-
   });
 }
