@@ -100,7 +100,9 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('対局開始待ち'), findsOneWidget);
 
-      await tester.tap(find.text('ロビーから退出してホームに戻る'));
+      final exitButton = find.text('ロビーから退出してホームに戻る');
+      await tester.ensureVisible(exitButton);
+      await tester.tap(exitButton);
       await tester.pumpAndSettle();
 
       expect(find.text('ロビーを開く'), findsOneWidget);
