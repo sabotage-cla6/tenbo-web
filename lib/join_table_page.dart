@@ -10,24 +10,24 @@ const _paper = Color(0xFFF7F5EF);
 
 class JoinTablePage extends StatefulWidget {
   const JoinTablePage({
-    this.findTablesByName,
+    this.findTableById,
     super.key,
   });
 
   /// テスト時に卓検索処理を差し替えられるようにする。
-  final Future<List<TableInfo>> Function(String name)? findTablesByName;
+  final Future<TableInfo?> Function(String tableId)? findTableById;
 
   @override
   State<JoinTablePage> createState() => _JoinTablePageState();
 }
 
 class _JoinTablePageState extends State<JoinTablePage> {
-  final _name = TextEditingController();
+  final _tableId = TextEditingController();
   bool _joining = false;
 
   @override
   void dispose() {
-    _name.dispose();
+    _tableId.dispose();
     super.dispose();
   }
 
@@ -40,29 +40,24 @@ class _JoinTablePageState extends State<JoinTablePage> {
   Future<void> _join() async {
     if (_joining) return;
 
-    final name = _name.text.trim();
-    if (name.isEmpty) {
-      _message('卓の名称を入力してください。');
+    final tableId = _tableId.text.trim();
+    if (tableId.isEmpty) {
+      _message('卓IDを入力してください。');
       return;
     }
 
     setState(() => _joining = true);
     try {
-      final findTables = widget.findTablesByName ??
-          TableRepository().findWaitingTablesByName;
-      final tables = await findTables(name);
+      final findTable = widget.findTableById ??
+          TableRepository().findWaitingTableById;
+      final table = await findTable(tableId);
       if (!mounted) return;
 
-      if (tables.isEmpty) {
-        _message('参加できる卓が見つかりません。卓名を確認してください。');
-        return;
-      }
-      if (tables.length > 1) {
-        _message('同じ名称で参加可能な卓が複数あります。卓名を変更してもらうか、管理者に確認してください。');
+      if (table == null) {
+        _message('参加できる卓が見つかりません。卓IDを確認してください。');
         return;
       }
 
-      final table = tables.single;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute<void>(
           builder: (_) => TableLobbyPage(
@@ -138,7 +133,7 @@ class _JoinTablePageState extends State<JoinTablePage> {
                       ),
                       const SizedBox(height: 8),
                       const Text(
-                        '参加する卓の名称を入力してください。',
+                        '参加する卓のIDを入力してください。',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           color: Colors.black54,
@@ -159,7 +154,7 @@ class _JoinTablePageState extends State<JoinTablePage> {
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               const Text(
-                                '卓の名称',
+                                '卓ID',
                                 style: TextStyle(
                                   color: _ink,
                                   fontSize: 13,
@@ -168,11 +163,11 @@ class _JoinTablePageState extends State<JoinTablePage> {
                               ),
                               const SizedBox(height: 8),
                               TextField(
-                                controller: _name,
+                                controller: _tableId,
                                 textInputAction: TextInputAction.search,
                                 onSubmitted: (_) => _join(),
                                 decoration: InputDecoration(
-                                  hintText: '例：金曜夜セット麻雀',
+                                  hintText: 'ロビーに表示された卓IDを入力',
                                   filled: true,
                                   fillColor: _paper,
                                   border: OutlineInputBorder(
