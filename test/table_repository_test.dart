@@ -1,51 +1,42 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:tenbo_web/table_repository.dart';
 
-class MockFirebaseAuth extends Mock implements FirebaseAuth {}
+class MockTableAuth extends Mock implements TableAuth {}
 
-class MockFirebaseFirestore extends Mock implements FirebaseFirestore {}
-
-class MockUser extends Mock implements User {}
-
-class MockTablesCollection
-    extends Mock
-    implements CollectionReference<Map<String, dynamic>> {}
-
-class MockTableDocument
-    extends Mock
-    implements DocumentReference<Map<String, dynamic>> {}
+class MockTableStore extends Mock implements TableStore {
+  // Mockitoの引数マッチャー(any / captureAny)はnullを渡すため、
+  // テスト用モックでは引数をnullableに広げて受け取る。
+  @override
+  Future<String> addTable(Map<String, dynamic>? data) =>
+      super.noSuchMethod(
+        Invocation.method(#addTable, [data]),
+        returnValue: Future<String>.value(''),
+      ) as Future<String>;
+}
 
 void main() {
-  late MockFirebaseAuth auth;
-  late MockFirebaseFirestore firestore;
-  late MockUser user;
-  late MockTablesCollection tables;
-  late MockTableDocument document;
+  late MockTableAuth auth;
+  late MockTableStore store;
   late TableRepository repository;
 
   setUp(() {
-    auth = MockFirebaseAuth();
-    firestore = MockFirebaseFirestore();
-    user = MockUser();
-    tables = MockTablesCollection();
-    document = MockTableDocument();
+    auth = MockTableAuth();
+    store = MockTableStore();
+    repository = TableRepository(auth: auth, store: store);
 
-    repository = TableRepository(firestore: firestore, auth: auth);
-
-    when(auth.currentUser).thenReturn(user);
-    when(user.uid).thenReturn('user-123');
-    when(user.displayName).thenReturn('  テストユーザー  ');
-    when(user.email).thenReturn('test@example.com');
-    when(firestore.collection('tables')).thenReturn(tables);
-    when(tables.add(any)).thenAnswer((_) async => document);
-    when(document.id).thenReturn('table-123');
+    when(auth.currentUser).thenReturn(
+      const TableUser(
+        uid: 'user-123',
+        displayName: '  テストユーザー  ',
+        email: 'test@example.com',
+      ),
+    );
+    when(store.addTable(any)).thenAnswer((_) async => 'table-123');
   });
 
   group('TableRepository.createTable', () {
-    test('ログイン済みなら卓情報をFirestoreに保存して卓IDを返す', () async {
+    test('ログイン済みなら卓情報を保存して卓IDを返す', () async {
       final tableId = await repository.createTable(
         name: '  テスト卓  ',
         playerCount: 4,
@@ -54,9 +45,8 @@ void main() {
 
       expect(tableId, 'table-123');
 
-      final savedData =
-          verify(tables.add(captureAny)).captured.single
-              as Map<String, dynamic>;
+      final savedData = verify(store.addTable(captureAny)).captured.single
+          as Map<String, dynamic>;
       expect(savedData['name'], 'テスト卓');
       expect(savedData['ownerUid'], 'user-123');
       expect(savedData['ownerName'], 'テストユーザー');
@@ -66,13 +56,18 @@ void main() {
         'startingPoints': 25000,
         'allowNegativePoints': true,
       });
-      expect(savedData['createdAt'], isA<FieldValue>());
-      expect(savedData['updatedAt'], isA<FieldValue>());
-      verify(firestore.collection('tables')).called(1);
+      expect(savedData['createdAt'], isNotNull);
+      expect(savedData['updatedAt'], isNotNull);
     });
 
     test('表示名が空ならメールアドレスをownerNameに使う', () async {
-      when(user.displayName).thenReturn('   ');
+      when(auth.currentUser).thenReturn(
+        const TableUser(
+          uid: 'user-123',
+          displayName: '   ',
+          email: 'test@example.com',
+        ),
+      );
 
       await repository.createTable(
         name: 'テスト卓',
@@ -80,13 +75,12 @@ void main() {
         settings: const {},
       );
 
-      final savedData =
-          verify(tables.add(captureAny)).captured.single
-              as Map<String, dynamic>;
+      final savedData = verify(store.addTable(captureAny)).captured.single
+          as Map<String, dynamic>;
       expect(savedData['ownerName'], 'test@example.com');
     });
 
-    test('未ログインならStateErrorを返しFirestoreには保存しない', () async {
+    test('未ログインならStateErrorになり保存処理を呼び出さない', () async {
       when(auth.currentUser).thenReturn(null);
 
       await expectLater(
@@ -98,11 +92,11 @@ void main() {
         throwsA(isA<StateError>()),
       );
 
-      verifyNever(firestore.collection(any));
+      verifyNever(store.addTable(any));
     });
 
-    test('Firestoreの保存に失敗したら例外を呼び出し元へ伝える', () async {
-      when(tables.add(any)).thenThrow(Exception('Firestore error'));
+    test('保存に失敗したら例外を呼び出し元へ伝える', () async {
+      when(store.addTable(any)).thenThrow(Exception('Firestore error'));
 
       await expectLater(
         repository.createTable(
