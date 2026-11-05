@@ -65,15 +65,15 @@ class TableLobbyPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final safePlayerCount = playerCount == 3 ? 3 : 4;
     final rules = [
-      '\${safePlayerCount}人麻雀',
-      '\${_formatPoints(settings['startingPoints'])}点持ち',
-      '\${_formatPoints(settings['returnPoints'])}点返し',
+      '${safePlayerCount}人麻雀',
+      '${_formatPoints(settings['startingPoints'])}点持ち',
+      '${_formatPoints(settings['returnPoints'])}点返し',
     ].join(' ・ ');
     final details = [
-      'ウマ：\${_formatUma()}',
-      '積み棒：\${_formatPoints(settings['honbaPoints'])}点',
-      '箱下精算：\${settings['allowNegativePoints'] == true ? 'あり' : 'なし'}',
-      '端数処理：\${_formatRounding()}',
+      'ウマ：${_formatUma()}',
+      '積み棒：${_formatPoints(settings['honbaPoints'])}点',
+      '箱下精算：${settings['allowNegativePoints'] == true ? 'あり' : 'なし'}',
+      '端数処理：${_formatRounding()}',
     ].join('  /  ');
 
     return Scaffold(
