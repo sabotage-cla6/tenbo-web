@@ -80,5 +80,45 @@ void main() {
         findsOneWidget,
       );
     });
+
+    testWidgets('同名の参加可能な卓が複数ある場合はロビーへ遷移しない',
+        (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: JoinTablePage(
+            findTablesByName: (_) async => [
+              const TableInfo(
+                id: 'table-123',
+                name: '重複卓',
+                ownerName: '作成者A',
+                playerCount: 4,
+                settings: {},
+              ),
+              const TableInfo(
+                id: 'table-456',
+                name: '重複卓',
+                ownerName: '作成者B',
+                playerCount: 4,
+                settings: {},
+              ),
+            ],
+          ),
+        ),
+      );
+
+      await tester.enterText(find.byType(TextField), '重複卓');
+      await tester.tap(find.text('卓に参加する'));
+      await tester.pump();
+
+      expect(find.byType(JoinTablePage), findsOneWidget);
+      expect(find.byType(TableLobbyPage), findsNothing);
+      expect(
+        find.text(
+          '同じ名称で参加可能な卓が複数あります。卓名を変更してもらうか、管理者に確認してください。',
+        ),
+        findsOneWidget,
+      );
+    });
+
   });
 }
