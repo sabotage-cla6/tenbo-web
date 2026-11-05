@@ -16,6 +16,13 @@ class MockTableStore extends Mock implements TableStore {
         Invocation.method(#addTable, [data]),
         returnValue: Future<String>.value(''),
       ) as Future<String>;
+
+  @override
+  Future<TableInfo?> findWaitingTableById(String? tableId) =>
+      super.noSuchMethod(
+        Invocation.method(#findWaitingTableById, [tableId]),
+        returnValue: Future<TableInfo?>.value(null),
+      ) as Future<TableInfo?>;
 }
 
 void main() {
@@ -109,6 +116,46 @@ void main() {
         ),
         throwsA(isA<Exception>()),
       );
+    });
+  });
+
+  group('TableRepository.findWaitingTableById', () {
+    test('卓IDの前後の空白を除去して参加可能な卓を検索する', () async {
+      const table = TableInfo(
+        id: 'table-123',
+        name: 'テスト卓',
+        ownerName: '作成者',
+        playerCount: 4,
+        settings: {'startingPoints': 25000},
+      );
+      when(store.findWaitingTableById('table-123'))
+          .thenAnswer((_) async => table);
+
+      final result =
+          await repository.findWaitingTableById('  table-123  ');
+
+      expect(result, table);
+      verify(store.findWaitingTableById('table-123')).called(1);
+    });
+
+    test('未ログインなら卓検索を行わない', () async {
+      when(auth.currentUser).thenReturn(null);
+
+      await expectLater(
+        repository.findWaitingTableById('table-123'),
+        throwsA(isA<StateError>()),
+      );
+
+      verifyNever(store.findWaitingTableById('table-123'));
+    });
+
+    test('卓IDが空なら検索せずArgumentErrorになる', () async {
+      await expectLater(
+        repository.findWaitingTableById('   '),
+        throwsA(isA<ArgumentError>()),
+      );
+
+      verifyNever(store.findWaitingTableById(''));
     });
   });
 }
