@@ -111,4 +111,35 @@ void main() {
       );
     });
   });
+
+  group('TableRepository.findWaitingTablesByName', () {
+    test('卓名の前後の空白を除去して参加可能な卓を検索する', () async {
+      const table = TableInfo(
+        id: 'table-123',
+        name: 'テスト卓',
+        ownerName: '作成者',
+        playerCount: 4,
+        settings: {'startingPoints': 25000},
+      );
+      when(store.findWaitingTablesByName('テスト卓'))
+          .thenAnswer((_) async => [table]);
+
+      final tables = await repository.findWaitingTablesByName('  テスト卓  ');
+
+      expect(tables, [table]);
+      verify(store.findWaitingTablesByName('テスト卓')).called(1);
+    });
+
+    test('未ログインなら卓検索を行わない', () async {
+      when(auth.currentUser).thenReturn(null);
+
+      await expectLater(
+        repository.findWaitingTablesByName('テスト卓'),
+        throwsA(isA<StateError>()),
+      );
+
+      verifyNever(store.findWaitingTablesByName(any));
+    });
+  });
+
 }
