@@ -57,7 +57,7 @@ abstract interface class TableAuth {
 /// 卓データの保存先を抽象化するインターフェース。
 abstract interface class TableStore {
   Future<String> addTable(Map<String, dynamic> data);
-  Future<List<TableInfo>> findWaitingTablesByName(String name);
+  Future<TableInfo?> findWaitingTableById(String tableId);
 }
 
 class FirebaseTableAuth implements TableAuth {
@@ -92,20 +92,16 @@ class FirestoreTableStore implements TableStore {
   }
 
   @override
-  Future<List<TableInfo>> findWaitingTablesByName(String name) async {
-    final snapshot = await _firestore
-        .collection('tables')
-        .where('name', isEqualTo: name)
-        .where('status', isEqualTo: 'waiting')
-        .limit(2)
-        .get();
+  Future<TableInfo?> findWaitingTableById(String tableId) async {
+    final document =
+        await _firestore.collection('tables').doc(tableId).get();
 
-    return snapshot.docs
-        .map((document) => TableInfo.fromDocument(
-              document.id,
-              document.data(),
-            ))
-        .toList();
+    if (!document.exists) return null;
+
+    final data = document.data();
+    if (data == null || data['status'] != 'waiting') return null;
+
+    return TableInfo.fromDocument(document.id, data);
   }
 }
 
@@ -143,17 +139,21 @@ class TableRepository {
     });
   }
 
-  Future<List<TableInfo>> findWaitingTablesByName(String name) async {
+  Future<TableInfo?> findWaitingTableById(String tableId) async {
     final user = _auth.currentUser;
     if (user == null) {
       throw StateError('卓に参加するにはログインが必要です。');
     }
 
-    final normalizedName = name.trim();
-    if (normalizedName.isEmpty) {
-      throw ArgumentError.value(name, 'name', '卓の名称を入力してください。');
+    final normalizedTableId = tableId.trim();
+    if (normalizedTableId.isEmpty) {
+      throw ArgumentError.value(
+        tableId,
+        'tableId',
+        '卓IDを入力してください。',
+      );
     }
 
-    return _store.findWaitingTablesByName(normalizedName);
+    return _store.findWaitingTableById(normalizedTableId);
   }
 }
