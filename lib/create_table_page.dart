@@ -1,5 +1,7 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import 'table_lobby_page.dart';
 import 'table_repository.dart';
 
 const _ink = Color(0xFF18352E);
@@ -73,42 +75,43 @@ class _CreateTablePageState extends State<CreateTablePage> {
       return;
     }
 
+    final playerCount = int.parse(_players);
     setState(() => _saving = true);
     try {
+      final settings = {
+        'startingPoints': int.parse(_start),
+        'returnPoints': int.parse(_return),
+        'umaType': _umaType,
+        'uma': uma.cast<int>(),
+        'honbaPoints': stack,
+        'multiRon': _multiRon,
+        'allowNegativePoints': _allowNegativePoints,
+        'tobiPoints': tobi,
+        'yakitoriPoints': yakitori,
+        'rounding': _rounding,
+      };
       final tableId = await TableRepository().createTable(
         name: name,
-        playerCount: int.parse(_players),
-        settings: {
-          'startingPoints': int.parse(_start),
-          'returnPoints': int.parse(_return),
-          'umaType': _umaType,
-          'uma': uma.cast<int>(),
-          'honbaPoints': stack,
-          'multiRon': _multiRon,
-          'allowNegativePoints': _allowNegativePoints,
-          'tobiPoints': tobi,
-          'yakitoriPoints': yakitori,
-          'rounding': _rounding,
-        },
+        playerCount: playerCount,
+        settings: settings,
       );
       if (!mounted) return;
-      await showDialog<void>(
-        context: context,
-        barrierDismissible: false,
-        builder: (dialogContext) => AlertDialog(
-          title: const Text('卓を登録しました'),
-          content: SelectableText(
-            '「$name」を登録しました。\n\n卓ID：$tableId',
+
+      final user = FirebaseAuth.instance.currentUser;
+      final displayName = user?.displayName?.trim();
+      final ownerName = displayName != null && displayName.isNotEmpty
+          ? displayName
+          : (user?.email ?? 'ユーザー');
+
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute<void>(
+          builder: (_) => TableLobbyPage(
+            tableId: tableId,
+            tableName: name,
+            playerCount: playerCount,
+            settings: settings,
+            ownerName: ownerName,
           ),
-          actions: [
-            FilledButton(
-              onPressed: () {
-                Navigator.of(dialogContext).pop();
-                Navigator.of(context).pop();
-              },
-              child: const Text('ホームに戻る'),
-            ),
-          ],
         ),
       );
     } catch (error) {
@@ -247,7 +250,7 @@ class _CreateTablePageState extends State<CreateTablePage> {
                     return Row(children: [Expanded(child: home), const SizedBox(width: 12), Expanded(flex: 2, child: create)]);
                   }),
                   const SizedBox(height: 12),
-                  const Text('登録した卓はFirestoreに保存されます。卓への参加・対局開始機能は今後追加します。',
+                  const Text('卓を作成しました。参加メンバーが揃うまでロビーでお待ちください。',
                     textAlign: TextAlign.center, style: TextStyle(color: Colors.black45, fontSize: 11)),
                 ],
               ),
