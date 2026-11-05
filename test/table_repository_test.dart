@@ -1,3 +1,6 @@
+// MockitoのMock基底クラスが持つ内部フィールドに関する警告を抑制する。
+// ignore_for_file: must_be_immutable
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:tenbo_web/table_repository.dart';
