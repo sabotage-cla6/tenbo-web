@@ -152,7 +152,7 @@ class HomePage extends StatelessWidget {
                               child: _MenuCard(
                                 icon: Icons.groups_outlined,
                                 title: '卓に参加',
-                                description: '卓の名称を入力して参加します',
+                                description: '卓IDを入力して参加します',
                                 onTap: () => Navigator.of(context).push(
                                   MaterialPageRoute<void>(
                                     builder: (_) => const JoinTablePage(),
