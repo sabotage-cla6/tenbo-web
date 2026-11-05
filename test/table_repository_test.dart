@@ -138,7 +138,7 @@ void main() {
         throwsA(isA<StateError>()),
       );
 
-      verifyNever(store.findWaitingTablesByName(any));
+      verifyNever(store.findWaitingTablesByName(argThat(isA<String>())));
     });
   });
 
