@@ -75,6 +75,7 @@ class _CreateTablePageState extends State<CreateTablePage> {
       return;
     }
 
+    final playerCount = int.parse(_players);
     setState(() => _saving = true);
     try {
       final settings = {
@@ -91,7 +92,7 @@ class _CreateTablePageState extends State<CreateTablePage> {
       };
       final tableId = await TableRepository().createTable(
         name: name,
-        playerCount: int.parse(_players),
+        playerCount: playerCount,
         settings: settings,
       );
       if (!mounted) return;
@@ -107,7 +108,7 @@ class _CreateTablePageState extends State<CreateTablePage> {
           builder: (_) => TableLobbyPage(
             tableId: tableId,
             tableName: name,
-            playerCount: int.parse(_players),
+            playerCount: playerCount,
             settings: settings,
             ownerName: ownerName,
           ),
