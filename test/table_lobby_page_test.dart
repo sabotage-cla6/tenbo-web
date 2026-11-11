@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tenbo_web/table_lobby_page.dart';
+import 'package:tenbo_web/table_repository.dart';
 
 Widget buildLobby({
   int playerCount = 4,
@@ -119,6 +120,13 @@ void main() {
                           tableName: 'テスト卓',
                           playerCount: 4,
                           ownerName: 'テストプレイヤー',
+                          membersStream: Stream.value(const [
+                            TableMember(
+                              uid: 'owner-1',
+                              displayName: 'テストプレイヤー',
+                              isOwner: true,
+                            ),
+                          ]),
                           settings: {},
                         ),
                       ),
