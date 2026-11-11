@@ -147,8 +147,6 @@ class FirestoreTableStore implements TableStore {
     final tableRef = _firestore.collection('tables').doc(tableId);
     final memberRef = tableRef.collection('members').doc(uid);
 
-    final existingMembers = await tableRef.collection('members').get();
-
     await _firestore.runTransaction((transaction) async {
       final tableSnapshot = await transaction.get(tableRef);
       if (!tableSnapshot.exists || tableSnapshot.data()?['status'] != 'waiting') {
@@ -158,8 +156,10 @@ class FirestoreTableStore implements TableStore {
       final memberSnapshot = await transaction.get(memberRef);
       if (memberSnapshot.exists) return;
 
-      final capacity = (tableSnapshot.data()?['playerCount'] as num?)?.toInt() ?? 4;
-      if (existingMembers.docs.length >= capacity) {
+      final tableData = tableSnapshot.data() ?? <String, dynamic>{};
+      final capacity = (tableData['playerCount'] as num?)?.toInt() ?? 4;
+      final memberCount = (tableData['memberCount'] as num?)?.toInt() ?? 1;
+      if (memberCount >= capacity) {
         throw StateError('この卓は満員です。');
       }
 
@@ -168,6 +168,10 @@ class FirestoreTableStore implements TableStore {
         'displayName': displayName,
         'isOwner': false,
         'joinedAt': FieldValue.serverTimestamp(),
+      });
+      transaction.update(tableRef, {
+        'memberCount': memberCount + 1,
+        'updatedAt': FieldValue.serverTimestamp(),
       });
     });
   }
@@ -218,6 +222,7 @@ class TableRepository {
         'ownerUid': user.uid,
         'ownerName': ownerName,
         'playerCount': playerCount,
+        'memberCount': 1,
         'status': 'waiting',
         'settings': settings,
         'createdAt': FieldValue.serverTimestamp(),
