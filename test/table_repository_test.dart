@@ -11,9 +11,16 @@ class MockTableStore extends Mock implements TableStore {
   // Mockitoの引数マッチャー(any / captureAny)はnullを渡すため、
   // テスト用モックでは引数をnullableに広げて受け取る。
   @override
-  Future<String> addTable(Map<String, dynamic>? data) =>
+  Future<String> addTable(
+    Map<String, dynamic>? data, {
+    String? ownerUid,
+    String? ownerName,
+  }) =>
       super.noSuchMethod(
-        Invocation.method(#addTable, [data]),
+        Invocation.method(#addTable, [data], {
+          #ownerUid: ownerUid,
+          #ownerName: ownerName,
+        }),
         returnValue: Future<String>.value(''),
       ) as Future<String>;
 
@@ -23,6 +30,67 @@ class MockTableStore extends Mock implements TableStore {
         Invocation.method(#findWaitingTableById, [tableId]),
         returnValue: Future<TableInfo?>.value(null),
       ) as Future<TableInfo?>;
+
+  @override
+  Future<void> joinWaitingTable(
+    String? tableId, {
+    String? uid,
+    String? displayName,
+  }) =>
+      super.noSuchMethod(
+        Invocation.method(#joinWaitingTable, [tableId], {
+          #uid: uid,
+          #displayName: displayName,
+        }),
+        returnValue: Future<void>.value(),
+      ) as Future<void>;
+
+  @override
+  Stream<List<TableMember>> watchMembers(String? tableId) =>
+      super.noSuchMethod(
+        Invocation.method(#watchMembers, [tableId]),
+        returnValue: const Stream<List<TableMember>>.empty(),
+      ) as Stream<List<TableMember>>;
+  group('TableRepository.joinWaitingTable', () {
+    test('ログイン中のユーザー情報を参加者として登録する', () async {
+      await repository.joinWaitingTable('  table-123  ');
+
+      verify(store.joinWaitingTable(
+        'table-123',
+        uid: 'user-123',
+        displayName: 'テストユーザー',
+      )).called(1);
+    });
+
+    test('表示名がなければメールアドレスを参加者名に使う', () async {
+      when(auth.currentUser).thenReturn(
+        const TableUser(uid: 'guest-1', email: 'guest@example.com'),
+      );
+
+      await repository.joinWaitingTable('table-123');
+
+      verify(store.joinWaitingTable(
+        'table-123',
+        uid: 'guest-1',
+        displayName: 'guest@example.com',
+      )).called(1);
+    });
+
+    test('未ログインなら参加者登録を行わない', () async {
+      when(auth.currentUser).thenReturn(null);
+
+      await expectLater(
+        repository.joinWaitingTable('table-123'),
+        throwsA(isA<StateError>()),
+      );
+
+      verifyNever(store.joinWaitingTable(
+        'table-123',
+        uid: anyNamed('uid'),
+        displayName: anyNamed('displayName'),
+      ));
+    });
+  });
 }
 
 void main() {
@@ -42,7 +110,11 @@ void main() {
         email: 'test@example.com',
       ),
     );
-    when(store.addTable(any)).thenAnswer((_) async => 'table-123');
+    when(store.addTable(
+      any,
+      ownerUid: 'user-123',
+      ownerName: 'テストユーザー',
+    )).thenAnswer((_) async => 'table-123');
   });
 
   group('TableRepository.createTable', () {
@@ -55,8 +127,11 @@ void main() {
 
       expect(tableId, 'table-123');
 
-      final savedData = verify(store.addTable(captureAny)).captured.single
-          as Map<String, dynamic>;
+      final savedData = verify(store.addTable(
+        captureAny,
+        ownerUid: 'user-123',
+        ownerName: 'テストユーザー',
+      )).captured.single as Map<String, dynamic>;
       expect(savedData['name'], 'テスト卓');
       expect(savedData['ownerUid'], 'user-123');
       expect(savedData['ownerName'], 'テストユーザー');
@@ -85,8 +160,11 @@ void main() {
         settings: const {},
       );
 
-      final savedData = verify(store.addTable(captureAny)).captured.single
-          as Map<String, dynamic>;
+      final savedData = verify(store.addTable(
+        captureAny,
+        ownerUid: 'user-123',
+        ownerName: 'test@example.com',
+      )).captured.single as Map<String, dynamic>;
       expect(savedData['ownerName'], 'test@example.com');
     });
 
@@ -102,11 +180,15 @@ void main() {
         throwsA(isA<StateError>()),
       );
 
-      verifyNever(store.addTable(any));
+      verifyNever(store.addTable(any, ownerUid: anyNamed('ownerUid'), ownerName: anyNamed('ownerName')));
     });
 
     test('保存に失敗したら例外を呼び出し元へ伝える', () async {
-      when(store.addTable(any)).thenThrow(Exception('Firestore error'));
+      when(store.addTable(
+        any,
+        ownerUid: 'user-123',
+        ownerName: 'テストユーザー',
+      )).thenThrow(Exception('Firestore error'));
 
       await expectLater(
         repository.createTable(
@@ -159,3 +241,4 @@ void main() {
     });
   });
 }
+
