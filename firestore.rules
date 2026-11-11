@@ -57,7 +57,7 @@ service cloud.firestore {
             || (
               exists(/databases/$(database)/documents/tables/$(tableId))
               && getAfter(/databases/$(database)/documents/tables/$(tableId)).data.memberCount
-                == get(/databases/$(database)/documents/tables/$(tableId)).data.memberCount + 1
+                == get(/databases/$(database)/documents/tables/$(tableId)).data.get('memberCount', 1) + 1
             )
           );
 
