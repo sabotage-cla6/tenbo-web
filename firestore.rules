@@ -10,7 +10,6 @@ service cloud.firestore {
         && request.resource.data.ownerUid == request.auth.uid;
 
       // 卓IDを指定した単一ドキュメントの取得のみ許可する。
-      // 存在しないIDもアプリ側で「見つからない」と判定できるようにする。
       allow get: if signedIn()
         && (resource == null
           || resource.data.ownerUid == request.auth.uid
@@ -19,6 +18,21 @@ service cloud.firestore {
       // 卓の更新・削除は引き続きオーナーだけに許可する。
       allow update, delete: if signedIn()
         && resource.data.ownerUid == request.auth.uid;
+
+      match /members/{userId} {
+        // 待機中ロビーの参加者一覧はログイン済みユーザーが取得できる。
+        allow get, list: if signedIn()
+          && get(/databases/$(database)/documents/tables/$(tableId)).data.status == 'waiting';
+
+        // 自分自身の参加情報だけを登録できる。
+        // 卓作成時のオーナー情報は親卓と同じ batch で作成するため getAfter を使う。
+        allow create: if signedIn()
+          && request.auth.uid == userId
+          && getAfter(/databases/$(database)/documents/tables/$(tableId)).data.status == 'waiting';
+
+        // 参加情報の変更・削除は別機能として扱う。
+        allow update, delete: if false;
+      }
     }
   }
 }
