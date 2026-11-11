@@ -78,6 +78,7 @@ class MockTableStore extends Mock implements TableStore {
         returnValue: Future<void>.value(),
       ) as Future<void>;
 
+}
 
 void main() {
   late MockTableAuth auth;
