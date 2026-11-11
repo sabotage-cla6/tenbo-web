@@ -78,27 +78,6 @@ class MockTableStore extends Mock implements TableStore {
         returnValue: Future<void>.value(),
       ) as Future<void>;
 
-  group('TableRepository起家決め', () {
-    test('起家・場決めをログイン中ユーザーとしてStoreへ依頼する', () async {
-      await repository.randomizeSeats('table-123', 4);
-      verify(store.randomizeSeats('table-123', 4, 'user-123')).called(1);
-    });
-
-    test('起家決めをログイン中ユーザーとしてStoreへ依頼する', () async {
-      await repository.chooseDealer('table-123', 3);
-      verify(store.chooseDealer('table-123', 3, 'user-123')).called(1);
-    });
-
-    test('未ログインなら起家決めを依頼しない', () async {
-      when(auth.currentUser).thenReturn(null);
-      await expectLater(
-        repository.chooseDealer('table-123', 4),
-        throwsA(isA<StateError>()),
-      );
-      verifyNever(store.chooseDealer(any, any, any));
-    });
-  });
-}
 
 void main() {
   late MockTableAuth auth;
@@ -315,6 +294,27 @@ void main() {
       );
 
       verifyNever(store.assignSeat(any, any, any));
+    });
+  });
+
+  group('TableRepository起家決め', () {
+    test('起家・場決めをログイン中ユーザーとしてStoreへ依頼する', () async {
+      await repository.randomizeSeats('table-123', 4);
+      verify(store.randomizeSeats('table-123', 4, 'user-123')).called(1);
+    });
+
+    test('起家決めをログイン中ユーザーとしてStoreへ依頼する', () async {
+      await repository.chooseDealer('table-123', 3);
+      verify(store.chooseDealer('table-123', 3, 'user-123')).called(1);
+    });
+
+    test('未ログインなら起家決めを依頼しない', () async {
+      when(auth.currentUser).thenReturn(null);
+      await expectLater(
+        repository.chooseDealer('table-123', 4),
+        throwsA(isA<StateError>()),
+      );
+      verifyNever(store.chooseDealer(any, any, any));
     });
   });
 }
