@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import 'firebase_config.dart';
 import 'login_page.dart';
 
 class SignupPage extends StatefulWidget {
@@ -115,7 +116,9 @@ class _SignupPageState extends State<SignupPage> {
       }
 
       await user.updateDisplayName(_nameController.text.trim());
-      await user.sendEmailVerification();
+      if (FirebaseConfig.sendEmailVerification) {
+        await user.sendEmailVerification();
+      }
       // アカウント作成直後は自動ログイン状態になるため、確認後はログイン画面へ戻します。
       await FirebaseAuth.instance.signOut();
 
@@ -124,10 +127,16 @@ class _SignupPageState extends State<SignupPage> {
         context: context,
         barrierDismissible: false,
         builder: (dialogContext) => AlertDialog(
-          title: const Text('仮登録が完了しました'),
+          title: Text(
+            FirebaseConfig.sendEmailVerification
+                ? '仮登録が完了しました'
+                : 'アカウント作成が完了しました',
+          ),
           content: Text(
-            '${_maskEmail(_emailController.text.trim())} 宛てに確認メールを送信しました。'
-            'メール内のリンクを開いて、メールアドレスの確認を完了してください。',
+            FirebaseConfig.sendEmailVerification
+                ? '${_maskEmail(_emailController.text.trim())} 宛てに確認メールを送信しました。'
+                    'メール内のリンクを開いて、メールアドレスの確認を完了してください。'
+                : '${_maskEmail(_emailController.text.trim())} のアカウントを作成しました。ログイン画面からログインしてください。',
           ),
           actions: [
             FilledButton(
@@ -387,9 +396,11 @@ class _SignupPageState extends State<SignupPage> {
                           ),
                           const SizedBox(height: 18),
                           Text(
-                            widget.firebaseReady
-                                ? '登録後、入力したメールアドレスに確認メールを送信します。'
-                                : 'Firebase未設定のため、現在はアカウント登録できません。設定手順はREADMEを確認してください。',
+                            !widget.firebaseReady
+                                ? 'Firebase未設定のため、現在はアカウント登録できません。設定手順はREADMEを確認してください。'
+                                : FirebaseConfig.sendEmailVerification
+                                    ? '登録後、入力したメールアドレスに確認メールを送信します。'
+                                    : 'テスト環境では確認メールを送信せずにアカウントを作成します。',
                             textAlign: TextAlign.center,
                             style: const TextStyle(
                               color: Colors.black54,
