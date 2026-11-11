@@ -40,7 +40,7 @@ void main() {
       expect(result.values.whereType<String>().length, 3);
     });
 
-    test('空席の位置は維持し、待機メンバーを座席に追加しない', () {
+    test('空席を詰めて座順を再設定し、待機メンバーを追加しない', () {
       final result = SeatArrangement.randomize(
         const {
           'east': 'A',
@@ -52,9 +52,11 @@ void main() {
         random: Random(3),
       );
 
-      expect(result['south'], isNull);
+      expect({result['east'], result['south']}, {'A', 'C'});
+      expect(result['east'], isNotNull);
+      expect(result['south'], isNotNull);
+      expect(result['west'], isNull);
       expect(result['north'], isNull);
-      expect({result['east'], result['west']}, {'A', 'C'});
     });
   });
 
