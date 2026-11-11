@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -85,6 +87,8 @@ abstract interface class TableStore {
   Stream<List<TableMember>> watchMembers(String tableId);
   Stream<Map<String, String?>> watchSeats(String tableId);
   Future<void> assignSeat(String tableId, String wind, String uid);
+  Future<void> randomizeSeats(String tableId, int playerCount, String uid);
+  Future<void> chooseDealer(String tableId, int playerCount, String uid);
 }
 
 class FirebaseTableAuth implements TableAuth {
@@ -230,6 +234,70 @@ class FirestoreTableStore implements TableStore {
     });
   }
 
+
+  Future<void> _updateSeatArrangement(
+    String tableId,
+    String uid,
+    int playerCount,
+    Map<String, String?> Function(Map<String, String?> current) arrange,
+  ) async {
+    final tableRef = _firestore.collection('tables').doc(tableId);
+    final memberRef = tableRef.collection('members').doc(uid);
+
+    await _firestore.runTransaction((transaction) async {
+      final tableSnapshot = await transaction.get(tableRef);
+      final memberSnapshot = await transaction.get(memberRef);
+      if (!tableSnapshot.exists || tableSnapshot.data()?['status'] != 'waiting') {
+        throw StateError('座席を変更できるロビーが見つかりません。');
+      }
+      if (!memberSnapshot.exists) {
+        throw StateError('卓の参加者だけが起家を決められます。');
+      }
+
+      final data = tableSnapshot.data()!;
+      final actualPlayerCount = (data['playerCount'] as num?)?.toInt() ?? 4;
+      if (actualPlayerCount != playerCount) {
+        throw StateError('卓の対局人数が変更されています。画面を更新してください。');
+      }
+      final rawSeats = data['seats'];
+      final current = <String, String?>{
+        'east': rawSeats is Map ? rawSeats['east'] as String? : null,
+        'south': rawSeats is Map ? rawSeats['south'] as String? : null,
+        'west': rawSeats is Map ? rawSeats['west'] as String? : null,
+        'north': rawSeats is Map ? rawSeats['north'] as String? : null,
+      };
+      if (!current.values.contains(uid)) {
+        throw StateError('起家を決めるには、先に対局者の席に入ってください。');
+      }
+
+      final nextSeats = arrange(current);
+      transaction.update(tableRef, {
+        'seats': nextSeats,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    });
+  }
+
+  @override
+  Future<void> randomizeSeats(String tableId, int playerCount, String uid) {
+    return _updateSeatArrangement(
+      tableId,
+      uid,
+      playerCount,
+      (current) => SeatArrangement.randomize(current, playerCount),
+    );
+  }
+
+  @override
+  Future<void> chooseDealer(String tableId, int playerCount, String uid) {
+    return _updateSeatArrangement(
+      tableId,
+      uid,
+      playerCount,
+      (current) => SeatArrangement.chooseDealer(current, playerCount),
+    );
+  }
+
   @override
   Stream<List<TableMember>> watchMembers(String tableId) {
     return _firestore
@@ -243,6 +311,56 @@ class FirestoreTableStore implements TableStore {
               .map((doc) => TableMember.fromDocument(doc.id, doc.data()))
               .toList(),
         );
+  }
+}
+
+
+/// 東南西北の座席配置を計算する純粋ロジック。
+class SeatArrangement {
+  static const _winds = ['east', 'south', 'west', 'north'];
+
+  static Map<String, String?> randomize(
+    Map<String, String?> current,
+    int playerCount, {
+    Random? random,
+  }) {
+    final winds = _winds.take(playerCount == 3 ? 3 : 4).toList();
+    final result = {for (final wind in _winds) wind: current[wind]};
+    final occupiedWinds = winds.where((wind) => result[wind] != null).toList();
+    final players = occupiedWinds.map((wind) => result[wind]!).toList()
+      ..shuffle(random ?? Random());
+    for (var index = 0; index < occupiedWinds.length; index++) {
+      result[occupiedWinds[index]] = players[index];
+    }
+    if (playerCount == 3) result['north'] = null;
+    return result;
+  }
+
+  static Map<String, String?> chooseDealer(
+    Map<String, String?> current,
+    int playerCount, {
+    Random? random,
+  }) {
+    final winds = _winds.take(playerCount == 3 ? 3 : 4).toList();
+    final result = {for (final wind in _winds) wind: current[wind]};
+    final occupiedIndexes = [
+      for (var index = 0; index < winds.length; index++)
+        if (result[winds[index]] != null) index,
+    ];
+    if (occupiedIndexes.isEmpty) {
+      throw StateError('起家を決めるには、先に対局者の席に入ってください。');
+    }
+
+    final dealerIndex = occupiedIndexes[(random ?? Random()).nextInt(occupiedIndexes.length)];
+    final rotated = [
+      for (var offset = 0; offset < winds.length; offset++)
+        result[winds[(dealerIndex + offset) % winds.length]],
+    ];
+    for (var index = 0; index < winds.length; index++) {
+      result[winds[index]] = rotated[index];
+    }
+    if (playerCount == 3) result['north'] = null;
+    return result;
   }
 }
 
@@ -333,5 +451,17 @@ class TableRepository {
     final uid = currentUserUid;
     if (uid == null) throw StateError('座席を変更するにはログインが必要です。');
     await _store.assignSeat(tableId, wind, uid);
+  }
+
+  Future<void> randomizeSeats(String tableId, int playerCount) async {
+    final uid = currentUserUid;
+    if (uid == null) throw StateError('起家を決めるにはログインが必要です。');
+    await _store.randomizeSeats(tableId, playerCount, uid);
+  }
+
+  Future<void> chooseDealer(String tableId, int playerCount) async {
+    final uid = currentUserUid;
+    if (uid == null) throw StateError('起家を決めるにはログインが必要です。');
+    await _store.chooseDealer(tableId, playerCount, uid);
   }
 }
