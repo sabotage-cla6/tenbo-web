@@ -59,6 +59,10 @@ for key in required:
     if value.startswith("replace-with-") or value in ("your-api-key", "your-app-id"):
         raise SystemExit(f"Replace the placeholder value for {key} in {path}.")
 
+for key, raw_value in config.items():
+    if isinstance(raw_value, str) and raw_value.strip().lower().startswith("replace-with-"):
+        raise SystemExit(f"Replace the placeholder value for {key} in {path}.")
+
 project_id = config["FIREBASE_PROJECT_ID"].strip()
 if expected_environment == "staging" and project_id != "tenbo-staging":
     raise SystemExit("The staging configuration must target the tenbo-staging Firebase project.")
