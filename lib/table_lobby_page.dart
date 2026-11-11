@@ -86,6 +86,76 @@ class TableLobbyPage extends StatelessWidget {
     }
   }
 
+  Widget _buildDealerButtons(
+    BuildContext context,
+    Map<String, String?> seats,
+    int playerCount,
+  ) {
+    final uid = currentUserUid ?? TableRepository().currentUserUid;
+    final canChoose = uid != null && seats.values.contains(uid);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: canChoose
+                    ? () => _runSeatAction(
+                          context,
+                          randomizeSeats ??
+                              () => TableRepository().randomizeSeats(
+                                    tableId,
+                                    playerCount,
+                                  ),
+                        )
+                    : null,
+                icon: const Icon(Icons.casino_outlined),
+                label: const Text('起家・場決め'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: _green,
+                  side: const BorderSide(color: Color(0xFFB9C9BE)),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: canChoose
+                    ? () => _runSeatAction(
+                          context,
+                          chooseDealer ??
+                              () => TableRepository().chooseDealer(
+                                    tableId,
+                                    playerCount,
+                                  ),
+                        )
+                    : null,
+                icon: const Icon(Icons.sports_esports_outlined),
+                label: const Text('起家決め'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: _green,
+                  side: const BorderSide(color: Color(0xFFB9C9BE)),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+              ),
+            ),
+          ],
+        ),
+        if (!canChoose)
+          const Padding(
+            padding: EdgeInsets.only(top: 8),
+            child: Text(
+              '起家を決めるには、先に対局者の席に入ってください。',
+              style: TextStyle(color: Colors.black54, fontSize: 12),
+              textAlign: TextAlign.center,
+            ),
+          ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final safePlayerCount = playerCount == 3 ? 3 : 4;
@@ -349,6 +419,8 @@ class TableLobbyPage extends StatelessWidget {
                                             },
                                           ),
                                         ),
+                                      const SizedBox(height: 14),
+                                      _buildDealerButtons(context, seats, safePlayerCount),
                                     ],
                                   );
                                 },
@@ -380,75 +452,6 @@ class TableLobbyPage extends StatelessWidget {
                       },
                     ),
                     const SizedBox(height: 14),
-                    StreamBuilder<Map<String, String?>>(
-                      stream: seatsStream ?? TableRepository().watchSeats(tableId),
-                      builder: (context, snapshot) {
-                        final seats = snapshot.data ?? const <String, String?>{};
-                        final uid = currentUserUid ?? TableRepository().currentUserUid;
-                        final canChoose = uid != null && seats.values.contains(uid);
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: OutlinedButton.icon(
-                                    onPressed: canChoose
-                                        ? () => _runSeatAction(
-                                              context,
-                                              randomizeSeats ??
-                                                  () => TableRepository().randomizeSeats(
-                                                        tableId,
-                                                        safePlayerCount,
-                                                      ),
-                                            )
-                                        : null,
-                                    icon: const Icon(Icons.casino_outlined),
-                                    label: const Text('起家・場決め'),
-                                    style: OutlinedButton.styleFrom(
-                                      foregroundColor: _green,
-                                      side: const BorderSide(color: Color(0xFFB9C9BE)),
-                                      padding: const EdgeInsets.symmetric(vertical: 14),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: OutlinedButton.icon(
-                                    onPressed: canChoose
-                                        ? () => _runSeatAction(
-                                              context,
-                                              chooseDealer ??
-                                                  () => TableRepository().chooseDealer(
-                                                        tableId,
-                                                        safePlayerCount,
-                                                      ),
-                                            )
-                                        : null,
-                                    icon: const Icon(Icons.sports_esports_outlined),
-                                    label: const Text('起家決め'),
-                                    style: OutlinedButton.styleFrom(
-                                      foregroundColor: _green,
-                                      side: const BorderSide(color: Color(0xFFB9C9BE)),
-                                      padding: const EdgeInsets.symmetric(vertical: 14),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            if (!canChoose)
-                              const Padding(
-                                padding: EdgeInsets.only(top: 8),
-                                child: Text(
-                                  '起家を決めるには、先に対局者の席に入ってください。',
-                                  style: TextStyle(color: Colors.black54, fontSize: 12),
-                                  textAlign: TextAlign.center,
-                                ),
-                              ),
-                          ],
-                        );
-                      },
-                    ),
                     const SizedBox(height: 22),
                     FilledButton.icon(
                       onPressed: null,
