@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'table_repository.dart';
+
 const _ink = Color(0xFF18352E);
 const _green = Color(0xFF245447);
 const _gold = Color(0xFFD7B56D);
@@ -13,6 +15,7 @@ class TableLobbyPage extends StatelessWidget {
     required this.playerCount,
     required this.settings,
     required this.ownerName,
+    this.membersStream,
     super.key,
   });
 
@@ -21,6 +24,7 @@ class TableLobbyPage extends StatelessWidget {
   final int playerCount;
   final Map<String, dynamic> settings;
   final String ownerName;
+  final Stream<List<TableMember>>? membersStream;
 
   static const _winds = ['東', '南', '西', '北'];
 
@@ -232,57 +236,79 @@ class TableLobbyPage extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 14),
-                    _LobbyCard(
-                      title: '参加プレイヤー・座席設定',
-                      icon: Icons.groups_outlined,
-                      trailing: Text(
-                        '1 / $safePlayerCount 人',
-                        style: const TextStyle(
-                          color: _green,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
-                        ),
-                      ),
-                      child: Column(
-                        children: [
-                          for (var index = 0; index < safePlayerCount; index++)
-                            Padding(
-                              padding: EdgeInsets.only(
-                                bottom: index == safePlayerCount - 1 ? 0 : 8,
-                              ),
-                              child: _PlayerSeat(
-                                wind: _winds[index],
-                                playerName: index == 0 ? ownerName : null,
-                                isOwner: index == 0,
-                              ),
-                            ),
-                          const SizedBox(height: 12),
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF7F5EF),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: const Row(
-                              children: [
-                                Icon(Icons.info_outline,
-                                    size: 17, color: Colors.black45),
-                                SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    '他のプレイヤーが参加するまでお待ちください。',
-                                    style: TextStyle(
-                                      color: Colors.black54,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ),
-                              ],
+                    StreamBuilder<List<TableMember>>(
+                      stream: membersStream ??
+                          TableRepository().watchMembers(tableId),
+                      builder: (context, snapshot) {
+                        final members = snapshot.data ?? const <TableMember>[];
+                        final visibleMembers =
+                            members.take(safePlayerCount).toList();
+                        return _LobbyCard(
+                          title: '参加プレイヤー・座席設定',
+                          icon: Icons.groups_outlined,
+                          trailing: Text(
+                            '${members.length} / $safePlayerCount 人',
+                            style: const TextStyle(
+                              color: _green,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
                             ),
                           ),
-                        ],
-                      ),
+                          child: Column(
+                            children: [
+                              if (snapshot.hasError)
+                                const Padding(
+                                  padding: EdgeInsets.only(bottom: 10),
+                                  child: Text(
+                                    '参加者情報を取得できませんでした。',
+                                    style: TextStyle(color: Colors.red),
+                                  ),
+                                ),
+                              for (var index = 0; index < safePlayerCount; index++)
+                                Padding(
+                                  padding: EdgeInsets.only(
+                                    bottom: index == safePlayerCount - 1 ? 0 : 8,
+                                  ),
+                                  child: _PlayerSeat(
+                                    wind: _winds[index],
+                                    playerName: index < visibleMembers.length
+                                        ? visibleMembers[index].displayName
+                                        : null,
+                                    isOwner: index < visibleMembers.length &&
+                                        visibleMembers[index].isOwner,
+                                  ),
+                                ),
+                              const SizedBox(height: 12),
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF7F5EF),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.info_outline,
+                                        size: 17, color: Colors.black45),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        members.length >= safePlayerCount
+                                            ? '参加者が揃いました。'
+                                            : 'あと${safePlayerCount - members.length}人の参加をお待ちください。',
+                                        style: const TextStyle(
+                                          color: Colors.black54,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
                     ),
                     const SizedBox(height: 14),
                     Row(
