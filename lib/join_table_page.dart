@@ -13,6 +13,8 @@ class JoinTablePage extends StatefulWidget {
     this.findTableById,
     this.registerMember,
     this.membersStream,
+    this.seatsStream,
+    this.currentUserUid,
     super.key,
   });
 
@@ -20,6 +22,8 @@ class JoinTablePage extends StatefulWidget {
   final Future<TableInfo?> Function(String tableId)? findTableById;
   final Future<void> Function(String tableId)? registerMember;
   final Stream<List<TableMember>>? membersStream;
+  final Stream<Map<String, String?>>? seatsStream;
+  final String? currentUserUid;
 
   @override
   State<JoinTablePage> createState() => _JoinTablePageState();
@@ -76,6 +80,8 @@ class _JoinTablePageState extends State<JoinTablePage> {
             settings: table.settings,
             ownerName: table.ownerName,
             membersStream: widget.membersStream,
+            seatsStream: widget.seatsStream,
+            currentUserUid: widget.currentUserUid,
           ),
         ),
       );
