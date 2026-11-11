@@ -256,8 +256,6 @@ class TableRepository {
 
   String? get currentUserUid => _auth.currentUser?.uid;
 
-  String? get currentUserUid => _auth.currentUser?.uid;
-
   String _displayName(TableUser user) {
     final name = user.displayName?.trim();
     if (name != null && name.isNotEmpty) return name;
@@ -281,6 +279,7 @@ class TableRepository {
         'ownerName': ownerName,
         'playerCount': playerCount,
         'memberCount': 1,
+        'seats': {'east': null, 'south': null, 'west': null, 'north': null},
         'status': 'waiting',
         'settings': settings,
         'createdAt': FieldValue.serverTimestamp(),
