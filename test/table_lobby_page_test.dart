@@ -115,7 +115,7 @@ void main() {
                   onPressed: () {
                     Navigator.of(context).push(
                       MaterialPageRoute<void>(
-                        builder: (_) => const TableLobbyPage(
+                        builder: (_) => TableLobbyPage(
                           tableId: 'table-123',
                           tableName: 'テスト卓',
                           playerCount: 4,
