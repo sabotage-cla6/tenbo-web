@@ -144,6 +144,8 @@ void main() {
                           tableName: 'テスト卓',
                           playerCount: 4,
                           ownerName: 'テストプレイヤー',
+                          currentUserUid: 'owner-1',
+                          seatsStream: Stream.value(const {'東': null, '南': null, '西': null, '北': null}),
                           membersStream: Stream.value(const [
                             TableMember(
                               uid: 'owner-1',
