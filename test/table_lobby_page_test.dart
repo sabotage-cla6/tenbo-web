@@ -2,13 +2,23 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tenbo_web/table_lobby_page.dart';
 
-Widget buildLobby({int playerCount = 4}) {
+Widget buildLobby({
+  int playerCount = 4,
+  Stream<List<TableMember>>? membersStream,
+}) {
   return MaterialApp(
     home: TableLobbyPage(
       tableId: 'table-123',
       tableName: 'テスト卓',
       playerCount: playerCount,
       ownerName: 'テストプレイヤー',
+      membersStream: membersStream ?? Stream.value(const [
+        TableMember(
+          uid: 'owner-1',
+          displayName: 'テストプレイヤー',
+          isOwner: true,
+        ),
+      ]),
       settings: const {
         'startingPoints': 25000,
         'returnPoints': 30000,
@@ -41,6 +51,32 @@ void main() {
       expect(find.text('南'), findsOneWidget);
       expect(find.text('西'), findsOneWidget);
       expect(find.text('北'), findsOneWidget);
+    });
+
+
+    testWidgets('Firestoreから届いた参加者を複数表示する', (tester) async {
+      await tester.pumpWidget(
+        buildLobby(
+          membersStream: Stream.value(const [
+            TableMember(
+              uid: 'owner-1',
+              displayName: 'テストプレイヤー',
+              isOwner: true,
+            ),
+            TableMember(
+              uid: 'guest-2',
+              displayName: '参加者2',
+              isOwner: false,
+            ),
+          ]),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.text('2 / 4 人'), findsOneWidget);
+      expect(find.text('テストプレイヤー'), findsOneWidget);
+      expect(find.text('参加者2'), findsOneWidget);
+      expect(find.text('参加者を待っています'), findsNWidgets(2));
     });
 
     testWidgets('三人麻雀では座席を3つだけ表示する', (tester) async {
