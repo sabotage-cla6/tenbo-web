@@ -82,7 +82,7 @@ abstract interface class TableStore {
     required String uid,
     required String displayName,
   });
-  Stream<List<TableMember>> watchMembers(String tableId);
+  Stream<List<TableMember>> watchMembers(String tableId);\n  Stream<Map<String, String?>> watchSeats(String tableId);\n  Future<void> assignSeat(String tableId, String wind, String uid);
 }
 
 class FirebaseTableAuth implements TableAuth {
@@ -198,7 +198,7 @@ class TableRepository {
         _store = store ?? FirestoreTableStore();
 
   final TableAuth _auth;
-  final TableStore _store;
+  final TableStore _store;\n\n  String? get currentUserUid => _auth.currentUser?.uid;
 
   String _displayName(TableUser user) {
     final name = user.displayName?.trim();
