@@ -8,6 +8,8 @@ Widget buildLobby({
   Stream<List<TableMember>>? membersStream,
   Stream<Map<String, String?>>? seatsStream,
   Future<void> Function(String wind)? assignSeat,
+  Future<void> Function()? randomizeSeats,
+  Future<void> Function()? chooseDealer,
   String currentUserUid = 'owner-1',
 }) {
   return MaterialApp(
@@ -31,6 +33,8 @@ Widget buildLobby({
       }),
       currentUserUid: currentUserUid,
       assignSeat: assignSeat,
+      randomizeSeats: randomizeSeats,
+      chooseDealer: chooseDealer,
       settings: const {
         'startingPoints': 25000,
         'returnPoints': 30000,
@@ -161,6 +165,67 @@ void main() {
       await tester.pump();
 
       expect(selectedWind, '東');
+    });
+
+
+    testWidgets('起家・場決めボタンで座席をランダム化する処理を呼び出す', (tester) async {
+      var called = false;
+      await tester.pumpWidget(
+        buildLobby(
+          seatsStream: Stream.value(const {
+            '東': 'owner-1',
+            '南': 'guest-2',
+            '西': 'guest-3',
+            '北': 'guest-4',
+          }),
+          randomizeSeats: () async { called = true; },
+        ),
+      );
+      await tester.pump();
+      final button = find.widgetWithText(OutlinedButton, '起家・場決め');
+      await tester.ensureVisible(button);
+      await tester.tap(button);
+      await tester.pump();
+      expect(called, isTrue);
+    });
+
+    testWidgets('起家決めボタンで起家選択処理を呼び出す', (tester) async {
+      var called = false;
+      await tester.pumpWidget(
+        buildLobby(
+          seatsStream: Stream.value(const {
+            '東': 'owner-1',
+            '南': 'guest-2',
+            '西': 'guest-3',
+            '北': 'guest-4',
+          }),
+          chooseDealer: () async { called = true; },
+        ),
+      );
+      await tester.pump();
+      final button = find.widgetWithText(OutlinedButton, '起家決め');
+      await tester.ensureVisible(button);
+      await tester.tap(button);
+      await tester.pump();
+      expect(called, isTrue);
+    });
+
+    testWidgets('自分が対局者でない場合は起家決めボタンを無効にする', (tester) async {
+      await tester.pumpWidget(
+        buildLobby(
+          seatsStream: Stream.value(const {
+            '東': 'guest-2',
+            '南': null,
+            '西': null,
+            '北': null,
+          }),
+        ),
+      );
+      await tester.pump();
+      final button = tester.widget<OutlinedButton>(
+        find.widgetWithText(OutlinedButton, '起家決め'),
+      );
+      expect(button.onPressed, isNull);
     });
 
     testWidgets('参加者が揃うまでは対局開始ボタンを無効にする',
