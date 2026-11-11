@@ -239,6 +239,13 @@ class TableLobbyPage extends StatelessWidget {
                     StreamBuilder<List<TableMember>>(
                       stream: membersStream ??
                           TableRepository().watchMembers(tableId),
+                      initialData: [
+                        TableMember(
+                          uid: 'owner',
+                          displayName: ownerName,
+                          isOwner: true,
+                        ),
+                      ],
                       builder: (context, snapshot) {
                         final members = snapshot.data ?? const <TableMember>[];
                         final visibleMembers =
