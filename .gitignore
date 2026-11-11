@@ -118,3 +118,7 @@ app.*.symbols
 !/packages/flutter_tools/test/data/dart_dependencies_test/**/.packages
 !/dev/ci/**/Gemfile.lock
 .firebase/hosting.**.cache
+
+# Local environment-specific Firebase build configuration.
+config/*.json
+!config/*.example.json

@@ -1,11 +1,21 @@
 import 'package:firebase_core/firebase_core.dart';
 
-/// Firebase Web configuration supplied at build/run time.
+/// Firebase Web and environment configuration supplied at build time.
 ///
-/// Values are Firebase Web app configuration values, not private credentials.
-/// Keep the project-specific values out of source control when preferred and
-/// pass them with --dart-define.
+/// Firebase Web configuration values are public client settings, not secrets.
+/// Pass environment-specific values with --dart-define-from-file.
 abstract final class FirebaseConfig {
+  static const environment = String.fromEnvironment(
+    'APP_ENV',
+    defaultValue: 'production',
+  );
+
+  /// Whether account creation sends an email verification message.
+  static const sendEmailVerification = bool.fromEnvironment(
+    'SEND_EMAIL_VERIFICATION',
+    defaultValue: true,
+  );
+
   static const _apiKey = String.fromEnvironment('FIREBASE_API_KEY');
   static const _appId = String.fromEnvironment('FIREBASE_APP_ID');
   static const _messagingSenderId =
