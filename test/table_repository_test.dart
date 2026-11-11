@@ -49,6 +49,20 @@ class MockTableStore extends Mock implements TableStore {
         Invocation.method(#watchMembers, [tableId]),
         returnValue: const Stream<List<TableMember>>.empty(),
       ) as Stream<List<TableMember>>;
+
+  @override
+  Stream<Map<String, String?>> watchSeats(String? tableId) =>
+      super.noSuchMethod(
+        Invocation.method(#watchSeats, [tableId]),
+        returnValue: const Stream<Map<String, String?>>.empty(),
+      ) as Stream<Map<String, String?>>;
+
+  @override
+  Future<void> assignSeat(String? tableId, String? wind, String? uid) =>
+      super.noSuchMethod(
+        Invocation.method(#assignSeat, [tableId, wind, uid]),
+        returnValue: Future<void>.value(),
+      ) as Future<void>;
 }
 
 void main() {
@@ -243,3 +257,24 @@ void main() {
     });
   });
 }
+
+
+  group('TableRepository.assignSeat', () {
+    test('ログイン中のユーザーを指定した座席へ割り当てる', () async {
+      await repository.assignSeat('table-123', '北');
+
+      verify(store.assignSeat('table-123', '北', 'user-123')).called(1);
+    });
+
+    test('未ログインなら座席を変更しない', () async {
+      when(auth.currentUser).thenReturn(null);
+
+      await expectLater(
+        repository.assignSeat('table-123', '東'),
+        throwsA(isA<StateError>()),
+      );
+
+      verifyNever(store.assignSeat(any, any, any));
+    });
+  });
+
