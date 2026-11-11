@@ -108,6 +108,12 @@ void main() {
       expect(savedData['ownerName'], 'テストユーザー');
       expect(savedData['playerCount'], 4);
       expect(savedData['memberCount'], 1);
+      expect(savedData['seats'], {
+        'east': null,
+        'south': null,
+        'west': null,
+        'north': null,
+      });
       expect(savedData['status'], 'waiting');
       expect(savedData['settings'], {
         'startingPoints': 25000,
