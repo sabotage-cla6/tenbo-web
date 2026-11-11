@@ -82,7 +82,9 @@ abstract interface class TableStore {
     required String uid,
     required String displayName,
   });
-  Stream<List<TableMember>> watchMembers(String tableId);\n  Stream<Map<String, String?>> watchSeats(String tableId);\n  Future<void> assignSeat(String tableId, String wind, String uid);
+  Stream<List<TableMember>> watchMembers(String tableId);
+  Stream<Map<String, String?>> watchSeats(String tableId);
+  Future<void> assignSeat(String tableId, String wind, String uid);
 }
 
 class FirebaseTableAuth implements TableAuth {
@@ -157,11 +159,7 @@ class FirestoreTableStore implements TableStore {
       if (memberSnapshot.exists) return;
 
       final tableData = tableSnapshot.data() ?? <String, dynamic>{};
-      final capacity = (tableData['playerCount'] as num?)?.toInt() ?? 4;
       final memberCount = (tableData['memberCount'] as num?)?.toInt() ?? 1;
-      if (memberCount >= capacity) {
-        throw StateError('この卓は満員です。');
-      }
 
       transaction.set(memberRef, {
         'uid': uid,
@@ -171,6 +169,62 @@ class FirestoreTableStore implements TableStore {
       });
       transaction.update(tableRef, {
         'memberCount': memberCount + 1,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    });
+  }
+
+  @override
+  Stream<Map<String, String?>> watchSeats(String tableId) {
+    return _firestore.collection('tables').doc(tableId).snapshots().map((snapshot) {
+      final rawSeats = snapshot.data()?['seats'];
+      final seats = rawSeats is Map ? rawSeats : const <String, dynamic>{};
+      return {
+        '東': seats['east'] as String?,
+        '南': seats['south'] as String?,
+        '西': seats['west'] as String?,
+        '北': seats['north'] as String?,
+      };
+    });
+  }
+
+  @override
+  Future<void> assignSeat(String tableId, String wind, String uid) async {
+    const fieldByWind = {'東': 'east', '南': 'south', '西': 'west', '北': 'north'};
+    final field = fieldByWind[wind];
+    if (field == null) throw ArgumentError.value(wind, 'wind', '不正な座席です。');
+    final tableRef = _firestore.collection('tables').doc(tableId);
+    final memberRef = tableRef.collection('members').doc(uid);
+
+    await _firestore.runTransaction((transaction) async {
+      final tableSnapshot = await transaction.get(tableRef);
+      final memberSnapshot = await transaction.get(memberRef);
+      if (!tableSnapshot.exists || tableSnapshot.data()?['status'] != 'waiting') {
+        throw StateError('座席を変更できるロビーが見つかりません。');
+      }
+      if (!memberSnapshot.exists) {
+        throw StateError('卓の参加者だけが対局者になれます。');
+      }
+
+      final data = tableSnapshot.data()!;
+      final playerCount = (data['playerCount'] as num?)?.toInt() ?? 4;
+      if (playerCount == 3 && wind == '北') {
+        throw StateError('三人麻雀では北の席を使用できません。');
+      }
+      final rawSeats = data['seats'];
+      final seats = <String, dynamic>{
+        'east': rawSeats is Map ? rawSeats['east'] : null,
+        'south': rawSeats is Map ? rawSeats['south'] : null,
+        'west': rawSeats is Map ? rawSeats['west'] : null,
+        'north': rawSeats is Map ? rawSeats['north'] : null,
+      };
+      if (seats[field] == uid) return;
+      for (final key in seats.keys) {
+        if (seats[key] == uid) seats[key] = null;
+      }
+      seats[field] = uid;
+      transaction.update(tableRef, {
+        'seats': seats,
         'updatedAt': FieldValue.serverTimestamp(),
       });
     });
@@ -198,7 +252,11 @@ class TableRepository {
         _store = store ?? FirestoreTableStore();
 
   final TableAuth _auth;
-  final TableStore _store;\n\n  String? get currentUserUid => _auth.currentUser?.uid;
+  final TableStore _store;
+
+  String? get currentUserUid => _auth.currentUser?.uid;
+
+  String? get currentUserUid => _auth.currentUser?.uid;
 
   String _displayName(TableUser user) {
     final name = user.displayName?.trim();
@@ -263,5 +321,18 @@ class TableRepository {
       return Stream.error(StateError('ロビーを表示するにはログインが必要です。'));
     }
     return _store.watchMembers(tableId);
+  }
+
+  Stream<Map<String, String?>> watchSeats(String tableId) {
+    if (_auth.currentUser == null) {
+      return Stream.error(StateError('ロビーを表示するにはログインが必要です。'));
+    }
+    return _store.watchSeats(tableId);
+  }
+
+  Future<void> assignSeat(String tableId, String wind) async {
+    final uid = currentUserUid;
+    if (uid == null) throw StateError('座席を変更するにはログインが必要です。');
+    await _store.assignSeat(tableId, wind, uid);
   }
 }
