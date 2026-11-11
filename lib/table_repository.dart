@@ -330,7 +330,7 @@ class SeatArrangement {
         .whereType<String>()
         .toList()
       ..shuffle(random ?? Random());
-    final result = {for (final wind in _winds) wind: null as String?};
+    final result = <String, String?>{for (final wind in _winds) wind: null};
     for (var index = 0; index < players.length; index++) {
       result[winds[index]] = players[index];
     }
