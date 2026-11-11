@@ -54,6 +54,30 @@ service cloud.firestore {
             && isMember(tableId, request.resource.data.seats.get('south', null))
             && isMember(tableId, request.resource.data.seats.get('west', null))
             && isMember(tableId, request.resource.data.seats.get('north', null))
+            && (request.resource.data.seats.get('east', null) == null
+              || request.resource.data.seats.get('south', null) == null
+              || request.resource.data.seats.get('east', null)
+                != request.resource.data.seats.get('south', null))
+            && (request.resource.data.seats.get('east', null) == null
+              || request.resource.data.seats.get('west', null) == null
+              || request.resource.data.seats.get('east', null)
+                != request.resource.data.seats.get('west', null))
+            && (request.resource.data.seats.get('east', null) == null
+              || request.resource.data.seats.get('north', null) == null
+              || request.resource.data.seats.get('east', null)
+                != request.resource.data.seats.get('north', null))
+            && (request.resource.data.seats.get('south', null) == null
+              || request.resource.data.seats.get('west', null) == null
+              || request.resource.data.seats.get('south', null)
+                != request.resource.data.seats.get('west', null))
+            && (request.resource.data.seats.get('south', null) == null
+              || request.resource.data.seats.get('north', null) == null
+              || request.resource.data.seats.get('south', null)
+                != request.resource.data.seats.get('north', null))
+            && (request.resource.data.seats.get('west', null) == null
+              || request.resource.data.seats.get('north', null) == null
+              || request.resource.data.seats.get('west', null)
+                != request.resource.data.seats.get('north', null))
             && (resource.data.playerCount != 3
               || request.resource.data.seats.get('north', null) == null)
           )
