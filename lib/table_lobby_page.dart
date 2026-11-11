@@ -16,6 +16,9 @@ class TableLobbyPage extends StatelessWidget {
     required this.settings,
     required this.ownerName,
     this.membersStream,
+    this.seatsStream,
+    this.assignSeat,
+    this.currentUserUid,
     super.key,
   });
 
@@ -25,6 +28,9 @@ class TableLobbyPage extends StatelessWidget {
   final Map<String, dynamic> settings;
   final String ownerName;
   final Stream<List<TableMember>>? membersStream;
+  final Stream<Map<String, String?>>? seatsStream;
+  final Future<void> Function(String wind)? assignSeat;
+  final String? currentUserUid;
 
   static const _winds = ['東', '南', '西', '北'];
 
@@ -237,37 +243,25 @@ class TableLobbyPage extends StatelessWidget {
                     ),
                     const SizedBox(height: 14),
                     StreamBuilder<List<TableMember>>(
-                      stream: membersStream ??
-                          TableRepository().watchMembers(tableId),
+                      stream: membersStream ?? TableRepository().watchMembers(tableId),
                       initialData: [
-                        TableMember(
-                          uid: 'owner',
-                          displayName: ownerName,
-                          isOwner: true,
-                        ),
+                        TableMember(uid: 'owner', displayName: ownerName, isOwner: true),
                       ],
-                      builder: (context, snapshot) {
-                        final loadedMembers =
-                            snapshot.data ?? const <TableMember>[];
-                        final hasOwner =
-                            loadedMembers.any((member) => member.isOwner);
+                      builder: (context, memberSnapshot) {
+                        final loadedMembers = memberSnapshot.data ?? const <TableMember>[];
+                        final hasOwner = loadedMembers.any((member) => member.isOwner);
                         final members = hasOwner
                             ? loadedMembers
                             : [
-                                TableMember(
-                                  uid: 'owner',
-                                  displayName: ownerName,
-                                  isOwner: true,
-                                ),
+                                TableMember(uid: 'owner', displayName: ownerName, isOwner: true),
                                 ...loadedMembers,
                               ];
-                        final visibleMembers =
-                            members.take(safePlayerCount).toList();
+                        final memberByUid = {for (final member in members) member.uid: member};
                         return _LobbyCard(
-                          title: '参加プレイヤー・座席設定',
+                          title: '参加者・対局中プレイヤー',
                           icon: Icons.groups_outlined,
                           trailing: Text(
-                            '${members.length} / $safePlayerCount 人',
+                            '参加者 ${members.length}人',
                             style: const TextStyle(
                               color: _green,
                               fontWeight: FontWeight.bold,
@@ -275,29 +269,75 @@ class TableLobbyPage extends StatelessWidget {
                             ),
                           ),
                           child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              if (snapshot.hasError)
-                                const Padding(
-                                  padding: EdgeInsets.only(bottom: 10),
-                                  child: Text(
-                                    '参加者情報を取得できませんでした。',
-                                    style: TextStyle(color: Colors.red),
-                                  ),
-                                ),
-                              for (var index = 0; index < safePlayerCount; index++)
+                              const Text('参加者',
+                                  style: TextStyle(color: _ink, fontWeight: FontWeight.bold)),
+                              const SizedBox(height: 8),
+                              if (memberSnapshot.hasError)
+                                const Text('参加者情報を取得できませんでした。',
+                                    style: TextStyle(color: Colors.red)),
+                              for (final member in members)
                                 Padding(
-                                  padding: EdgeInsets.only(
-                                    bottom: index == safePlayerCount - 1 ? 0 : 8,
-                                  ),
-                                  child: _PlayerSeat(
-                                    wind: _winds[index],
-                                    playerName: index < visibleMembers.length
-                                        ? visibleMembers[index].displayName
-                                        : null,
-                                    isOwner: index < visibleMembers.length &&
-                                        visibleMembers[index].isOwner,
+                                  padding: const EdgeInsets.only(bottom: 5),
+                                  child: Row(
+                                    children: [
+                                      const Icon(Icons.person_outline, size: 18, color: Colors.black45),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(member.displayName,
+                                            style: const TextStyle(color: _ink, fontSize: 14)),
+                                      ),
+                                      if (member.isOwner)
+                                        const Text('オーナー',
+                                            style: TextStyle(color: _green, fontSize: 11)),
+                                    ],
                                   ),
                                 ),
+                              const SizedBox(height: 16),
+                              const Divider(height: 1, color: Color(0xFFECEFE9)),
+                              const SizedBox(height: 14),
+                              const Text('対局中プレイヤー',
+                                  style: TextStyle(color: _ink, fontWeight: FontWeight.bold)),
+                              const SizedBox(height: 8),
+                              StreamBuilder<Map<String, String?>>(
+                                stream: seatsStream ?? TableRepository().watchSeats(tableId),
+                                initialData: const {'東': null, '南': null, '西': null, '北': null},
+                                builder: (context, seatSnapshot) {
+                                  final seats = seatSnapshot.data ?? const <String, String?>{};
+                                  return Column(
+                                    children: [
+                                      for (final wind in _winds.take(safePlayerCount))
+                                        Padding(
+                                          padding: EdgeInsets.only(
+                                            bottom: wind == _winds[safePlayerCount - 1] ? 0 : 8,
+                                          ),
+                                          child: _PlayerSeat(
+                                            wind: wind,
+                                            playerName: memberByUid[seats[wind]]?.displayName,
+                                            isOwner: memberByUid[seats[wind]]?.isOwner ?? false,
+                                            isMine: seats[wind] == (currentUserUid ?? TableRepository().currentUserUid),
+                                            onTap: () async {
+                                              try {
+                                                final assign = assignSeat ??
+                                                    (seat) => TableRepository().assignSeat(tableId, seat);
+                                                await assign(wind);
+                                              } catch (error) {
+                                                if (!context.mounted) return;
+                                                final message = error is StateError
+                                                    ? error.message.toString()
+                                                    : '座席の変更に失敗しました。';
+                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                  SnackBar(content: Text(message)),
+                                                );
+                                              }
+                                            },
+                                          ),
+                                        ),
+                                    ],
+                                  );
+                                },
+                              ),
                               const SizedBox(height: 12),
                               Container(
                                 width: double.infinity,
@@ -306,20 +346,14 @@ class TableLobbyPage extends StatelessWidget {
                                   color: const Color(0xFFF7F5EF),
                                   borderRadius: BorderRadius.circular(10),
                                 ),
-                                child: Row(
+                                child: const Row(
                                   children: [
-                                    const Icon(Icons.info_outline,
-                                        size: 17, color: Colors.black45),
-                                    const SizedBox(width: 8),
+                                    Icon(Icons.info_outline, size: 17, color: Colors.black45),
+                                    SizedBox(width: 8),
                                     Expanded(
                                       child: Text(
-                                        members.length >= safePlayerCount
-                                            ? '参加者が揃いました。'
-                                            : 'あと${safePlayerCount - members.length}人の参加をお待ちください。',
-                                        style: const TextStyle(
-                                          color: Colors.black54,
-                                          fontSize: 12,
-                                        ),
+                                        '空席または交代したい席をクリックすると、自分がその席の対局者になります。',
+                                        style: TextStyle(color: Colors.black54, fontSize: 12),
                                       ),
                                     ),
                                   ],
@@ -452,75 +486,75 @@ class _PlayerSeat extends StatelessWidget {
     required this.wind,
     required this.playerName,
     required this.isOwner,
+    required this.isMine,
+    required this.onTap,
   });
 
   final String wind;
   final String? playerName;
   final bool isOwner;
+  final bool isMine;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final occupied = playerName != null && playerName!.trim().isNotEmpty;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
-      decoration: BoxDecoration(
-        color: occupied ? const Color(0xFFF1F5F1) : const Color(0xFFFAF9F6),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: occupied ? const Color(0xFFC9D9CE) : const Color(0xFFE9E5DC),
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 34,
-            height: 34,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: wind == '東'
-                  ? const Color(0xFFE9D9B5)
-                  : const Color(0xFFECEFE9),
-              borderRadius: BorderRadius.circular(9),
-            ),
-            child: Text(
-              wind,
-              style: const TextStyle(
-                color: _ink,
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
-              ),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+          decoration: BoxDecoration(
+            color: occupied ? const Color(0xFFF1F5F1) : const Color(0xFFFAF9F6),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isMine ? _gold : (occupied ? const Color(0xFFC9D9CE) : const Color(0xFFE9E5DC)),
+              width: isMine ? 2 : 1,
             ),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              occupied ? playerName! : '参加者を待っています',
-              style: TextStyle(
-                color: occupied ? _ink : Colors.black45,
-                fontSize: 14,
-                fontWeight: occupied ? FontWeight.bold : FontWeight.normal,
+          child: Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: wind == '東' ? const Color(0xFFE9D9B5) : const Color(0xFFECEFE9),
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: Text(wind,
+                    style: const TextStyle(color: _ink, fontWeight: FontWeight.bold, fontSize: 14)),
               ),
-            ),
-          ),
-          if (isOwner && occupied)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-              decoration: BoxDecoration(
-                color: const Color(0xFFE6EEE8),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Text(
-                'オーナー',
-                style: TextStyle(
-                  color: _green,
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  occupied ? playerName! : '空席（クリックして参加）',
+                  style: TextStyle(
+                    color: occupied ? _ink : Colors.black45,
+                    fontSize: 14,
+                    fontWeight: occupied ? FontWeight.bold : FontWeight.normal,
+                  ),
                 ),
               ),
-            )
-          else if (!occupied)
-            const Icon(Icons.person_add_alt_1, color: Colors.black26, size: 18),
-        ],
+              if (isOwner && occupied)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE6EEE8),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Text('オーナー',
+                      style: TextStyle(color: _green, fontSize: 10, fontWeight: FontWeight.bold)),
+                )
+              else if (isMine)
+                const Icon(Icons.check_circle, color: _green, size: 18)
+              else
+                const Icon(Icons.touch_app_outlined, color: Colors.black26, size: 18),
+            ],
+          ),
+        ),
       ),
     );
   }
