@@ -8,6 +8,7 @@ Widget buildLobby({
   Stream<List<TableMember>>? membersStream,
   Stream<Map<String, String?>>? seatsStream,
   Future<void> Function(String wind)? assignSeat,
+  String currentUserUid = 'owner-1',
 }) {
   return MaterialApp(
     home: TableLobbyPage(
@@ -28,7 +29,7 @@ Widget buildLobby({
         '西': null,
         '北': null,
       }),
-      currentUserUid: 'owner-1',
+      currentUserUid: currentUserUid,
       assignSeat: assignSeat,
       settings: const {
         'startingPoints': 25000,
@@ -88,6 +89,26 @@ void main() {
       expect(find.text('テストプレイヤー'), findsOneWidget);
       expect(find.text('参加者2'), findsOneWidget);
       expect(find.text('空席（クリックして参加）'), findsNWidgets(4));
+    });
+
+    testWidgets('5人以上の参加者も一覧にすべて表示する', (tester) async {
+      await tester.pumpWidget(
+        buildLobby(
+          membersStream: Stream.value(const [
+            TableMember(uid: 'owner-1', displayName: 'A', isOwner: true),
+            TableMember(uid: 'b', displayName: 'B', isOwner: false),
+            TableMember(uid: 'c', displayName: 'C', isOwner: false),
+            TableMember(uid: 'd', displayName: 'D', isOwner: false),
+            TableMember(uid: 'e', displayName: 'E', isOwner: false),
+          ]),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.text('参加者 5人'), findsOneWidget);
+      for (final name in ['A', 'B', 'C', 'D', 'E']) {
+        expect(find.text(name), findsOneWidget);
+      }
     });
 
     testWidgets('三人麻雀では座席を3つだけ表示する', (tester) async {
