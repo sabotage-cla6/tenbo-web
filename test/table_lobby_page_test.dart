@@ -136,6 +136,33 @@ void main() {
       expect(selectedWind, '東');
     });
 
+    testWidgets('他の人が座っている席をクリックして交代できる', (tester) async {
+      String? selectedWind;
+      await tester.pumpWidget(
+        buildLobby(
+          membersStream: Stream.value(const [
+            TableMember(uid: 'owner-1', displayName: 'テストプレイヤー', isOwner: true),
+            TableMember(uid: 'guest-2', displayName: '参加者2', isOwner: false),
+          ]),
+          seatsStream: Stream.value(const {
+            '東': 'guest-2',
+            '南': null,
+            '西': null,
+            '北': null,
+          }),
+          assignSeat: (wind) async {
+            selectedWind = wind;
+          },
+        ),
+      );
+      await tester.pump();
+
+      await tester.tap(find.text('参加者2'));
+      await tester.pump();
+
+      expect(selectedWind, '東');
+    });
+
     testWidgets('参加者が揃うまでは対局開始ボタンを無効にする',
         (tester) async {
       await tester.pumpWidget(buildLobby());
