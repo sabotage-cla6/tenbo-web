@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import 'create_table_page.dart';
+import 'join_table_page.dart';
 
 const _menuInk = Color(0xFF18352E);
 const _menuGreen = Color(0xFF245447);
@@ -151,8 +152,12 @@ class HomePage extends StatelessWidget {
                               child: _MenuCard(
                                 icon: Icons.groups_outlined,
                                 title: '卓に参加',
-                                description: '参加コードなどを使って卓に加わります',
-                                onTap: () => _showComingSoon(context, '卓への参加'),
+                                description: '卓IDを入力して参加します',
+                                onTap: () => Navigator.of(context).push(
+                                  MaterialPageRoute<void>(
+                                    builder: (_) => const JoinTablePage(),
+                                  ),
+                                ),
                               ),
                             ),
                             SizedBox(
