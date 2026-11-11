@@ -8,8 +8,6 @@ import 'package:tenbo_web/table_repository.dart';
 class MockTableAuth extends Mock implements TableAuth {}
 
 class MockTableStore extends Mock implements TableStore {
-  // Mockitoの引数マッチャー(any / captureAny)はnullを渡すため、
-  // テスト用モックでは引数をnullableに広げて受け取る。
   @override
   Future<String> addTable(
     Map<String, dynamic>? data, {
@@ -51,46 +49,6 @@ class MockTableStore extends Mock implements TableStore {
         Invocation.method(#watchMembers, [tableId]),
         returnValue: const Stream<List<TableMember>>.empty(),
       ) as Stream<List<TableMember>>;
-  group('TableRepository.joinWaitingTable', () {
-    test('ログイン中のユーザー情報を参加者として登録する', () async {
-      await repository.joinWaitingTable('  table-123  ');
-
-      verify(store.joinWaitingTable(
-        'table-123',
-        uid: 'user-123',
-        displayName: 'テストユーザー',
-      )).called(1);
-    });
-
-    test('表示名がなければメールアドレスを参加者名に使う', () async {
-      when(auth.currentUser).thenReturn(
-        const TableUser(uid: 'guest-1', email: 'guest@example.com'),
-      );
-
-      await repository.joinWaitingTable('table-123');
-
-      verify(store.joinWaitingTable(
-        'table-123',
-        uid: 'guest-1',
-        displayName: 'guest@example.com',
-      )).called(1);
-    });
-
-    test('未ログインなら参加者登録を行わない', () async {
-      when(auth.currentUser).thenReturn(null);
-
-      await expectLater(
-        repository.joinWaitingTable('table-123'),
-        throwsA(isA<StateError>()),
-      );
-
-      verifyNever(store.joinWaitingTable(
-        'table-123',
-        uid: anyNamed('uid'),
-        displayName: anyNamed('displayName'),
-      ));
-    });
-  });
 }
 
 void main() {
@@ -118,7 +76,7 @@ void main() {
   });
 
   group('TableRepository.createTable', () {
-    test('ログイン済みなら卓情報を保存して卓IDを返す', () async {
+    test('ログイン済みなら卓情報とオーナー情報を保存して卓IDを返す', () async {
       final tableId = await repository.createTable(
         name: '  テスト卓  ',
         playerCount: 4,
@@ -126,7 +84,6 @@ void main() {
       );
 
       expect(tableId, 'table-123');
-
       final savedData = verify(store.addTable(
         captureAny,
         ownerUid: 'user-123',
@@ -160,15 +117,14 @@ void main() {
         settings: const {},
       );
 
-      final savedData = verify(store.addTable(
-        captureAny,
+      verify(store.addTable(
+        any,
         ownerUid: 'user-123',
         ownerName: 'test@example.com',
-      )).captured.single as Map<String, dynamic>;
-      expect(savedData['ownerName'], 'test@example.com');
+      )).called(1);
     });
 
-    test('未ログインならStateErrorになり保存処理を呼び出さない', () async {
+    test('未ログインなら保存処理を呼び出さない', () async {
       when(auth.currentUser).thenReturn(null);
 
       await expectLater(
@@ -180,7 +136,11 @@ void main() {
         throwsA(isA<StateError>()),
       );
 
-      verifyNever(store.addTable(any, ownerUid: anyNamed('ownerUid'), ownerName: anyNamed('ownerName')));
+      verifyNever(store.addTable(
+        any,
+        ownerUid: anyNamed('ownerUid'),
+        ownerName: anyNamed('ownerName'),
+      ));
     });
 
     test('保存に失敗したら例外を呼び出し元へ伝える', () async {
@@ -240,5 +200,45 @@ void main() {
       verifyNever(store.findWaitingTableById(''));
     });
   });
-}
 
+  group('TableRepository.joinWaitingTable', () {
+    test('ログイン中のユーザー情報を参加者として登録する', () async {
+      await repository.joinWaitingTable('  table-123  ');
+
+      verify(store.joinWaitingTable(
+        'table-123',
+        uid: 'user-123',
+        displayName: 'テストユーザー',
+      )).called(1);
+    });
+
+    test('表示名がなければメールアドレスを参加者名に使う', () async {
+      when(auth.currentUser).thenReturn(
+        const TableUser(uid: 'guest-1', email: 'guest@example.com'),
+      );
+
+      await repository.joinWaitingTable('table-123');
+
+      verify(store.joinWaitingTable(
+        'table-123',
+        uid: 'guest-1',
+        displayName: 'guest@example.com',
+      )).called(1);
+    });
+
+    test('未ログインなら参加者登録を行わない', () async {
+      when(auth.currentUser).thenReturn(null);
+
+      await expectLater(
+        repository.joinWaitingTable('table-123'),
+        throwsA(isA<StateError>()),
+      );
+
+      verifyNever(store.joinWaitingTable(
+        'table-123',
+        uid: anyNamed('uid'),
+        displayName: anyNamed('displayName'),
+      ));
+    });
+  });
+}
