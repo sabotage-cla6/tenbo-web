@@ -325,14 +325,15 @@ class SeatArrangement {
     Random? random,
   }) {
     final winds = _winds.take(playerCount == 3 ? 3 : 4).toList();
-    final result = {for (final wind in _winds) wind: current[wind]};
-    final occupiedWinds = winds.where((wind) => result[wind] != null).toList();
-    final players = occupiedWinds.map((wind) => result[wind]!).toList()
+    final players = winds
+        .map((wind) => current[wind])
+        .whereType<String>()
+        .toList()
       ..shuffle(random ?? Random());
-    for (var index = 0; index < occupiedWinds.length; index++) {
-      result[occupiedWinds[index]] = players[index];
+    final result = {for (final wind in _winds) wind: null as String?};
+    for (var index = 0; index < players.length; index++) {
+      result[winds[index]] = players[index];
     }
-    if (playerCount == 3) result['north'] = null;
     return result;
   }
 
