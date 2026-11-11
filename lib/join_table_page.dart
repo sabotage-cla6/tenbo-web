@@ -11,11 +11,15 @@ const _paper = Color(0xFFF7F5EF);
 class JoinTablePage extends StatefulWidget {
   const JoinTablePage({
     this.findTableById,
+    this.registerMember,
+    this.membersStream,
     super.key,
   });
 
   /// テスト時に卓検索処理を差し替えられるようにする。
   final Future<TableInfo?> Function(String tableId)? findTableById;
+  final Future<void> Function(String tableId)? registerMember;
+  final Stream<List<TableMember>>? membersStream;
 
   @override
   State<JoinTablePage> createState() => _JoinTablePageState();
@@ -58,6 +62,11 @@ class _JoinTablePageState extends State<JoinTablePage> {
         return;
       }
 
+      final registerMember =
+          widget.registerMember ?? TableRepository().joinWaitingTable;
+      await registerMember(table.id);
+      if (!mounted) return;
+
       Navigator.of(context).pushReplacement(
         MaterialPageRoute<void>(
           builder: (_) => TableLobbyPage(
@@ -66,6 +75,7 @@ class _JoinTablePageState extends State<JoinTablePage> {
             playerCount: table.playerCount,
             settings: table.settings,
             ownerName: table.ownerName,
+            membersStream: widget.membersStream,
           ),
         ),
       );
