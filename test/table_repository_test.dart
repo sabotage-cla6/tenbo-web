@@ -93,6 +93,7 @@ void main() {
       expect(savedData['ownerUid'], 'user-123');
       expect(savedData['ownerName'], 'テストユーザー');
       expect(savedData['playerCount'], 4);
+      expect(savedData['memberCount'], 1);
       expect(savedData['status'], 'waiting');
       expect(savedData['settings'], {
         'startingPoints': 25000,
