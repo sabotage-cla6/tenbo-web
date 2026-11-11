@@ -81,8 +81,12 @@ class _JoinTablePageState extends State<JoinTablePage> {
       );
     } catch (error) {
       if (!mounted) return;
-      _message('卓を検索できませんでした。通信状態とFirestoreの設定を確認してください。');
-      debugPrint('Table search failed: $error');
+      if (error is StateError) {
+        _message(error.message.toString());
+      } else {
+        _message('卓への参加に失敗しました。通信状態とFirestoreの設定を確認してください。');
+      }
+      debugPrint('Table join failed: $error');
     } finally {
       if (mounted) setState(() => _joining = false);
     }
