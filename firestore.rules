@@ -5,20 +5,113 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function isMember(tableId, userId) {
+      return userId == null
+        || exists(/databases/$(database)/documents/tables/$(tableId)/members/$(userId));
+    }
+
     match /tables/{tableId} {
       allow create: if signedIn()
         && request.resource.data.ownerUid == request.auth.uid;
 
       // 卓IDを指定した単一ドキュメントの取得のみ許可する。
-      // 存在しないIDもアプリ側で「見つからない」と判定できるようにする。
       allow get: if signedIn()
         && (resource == null
           || resource.data.ownerUid == request.auth.uid
           || resource.data.status == 'waiting');
 
-      // 卓の更新・削除は引き続きオーナーだけに許可する。
-      allow update, delete: if signedIn()
+      // 卓の設定変更・削除はオーナーのみ。
+      // 参加者登録に伴う memberCount / updatedAt の更新だけは、
+      // 同じトランザクションで本人の参加者ドキュメントが新規作成される場合に許可する。
+      allow update: if signedIn()
+        && (
+          resource.data.ownerUid == request.auth.uid
+          || (
+            resource.data.status == 'waiting'
+            && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['memberCount', 'updatedAt'])
+            && request.resource.data.memberCount == resource.data.get('memberCount', 1) + 1
+            && existsAfter(
+              /databases/$(database)/documents/tables/$(tableId)/members/$(request.auth.uid)
+            )
+            && !exists(
+              /databases/$(database)/documents/tables/$(tableId)/members/$(request.auth.uid)
+            )
+          )
+          || (
+            resource.data.status == 'waiting'
+            && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['seats', 'updatedAt'])
+            && exists(
+              /databases/$(database)/documents/tables/$(tableId)/members/$(request.auth.uid)
+            )
+            && request.resource.data.seats.keys().hasOnly(['east', 'south', 'west', 'north'])
+            && (request.resource.data.seats.get('east', null) == request.auth.uid
+              || request.resource.data.seats.get('south', null) == request.auth.uid
+              || request.resource.data.seats.get('west', null) == request.auth.uid
+              || request.resource.data.seats.get('north', null) == request.auth.uid)
+            && isMember(tableId, request.resource.data.seats.get('east', null))
+            && isMember(tableId, request.resource.data.seats.get('south', null))
+            && isMember(tableId, request.resource.data.seats.get('west', null))
+            && isMember(tableId, request.resource.data.seats.get('north', null))
+            && (request.resource.data.seats.get('east', null) == null
+              || request.resource.data.seats.get('south', null) == null
+              || request.resource.data.seats.get('east', null)
+                != request.resource.data.seats.get('south', null))
+            && (request.resource.data.seats.get('east', null) == null
+              || request.resource.data.seats.get('west', null) == null
+              || request.resource.data.seats.get('east', null)
+                != request.resource.data.seats.get('west', null))
+            && (request.resource.data.seats.get('east', null) == null
+              || request.resource.data.seats.get('north', null) == null
+              || request.resource.data.seats.get('east', null)
+                != request.resource.data.seats.get('north', null))
+            && (request.resource.data.seats.get('south', null) == null
+              || request.resource.data.seats.get('west', null) == null
+              || request.resource.data.seats.get('south', null)
+                != request.resource.data.seats.get('west', null))
+            && (request.resource.data.seats.get('south', null) == null
+              || request.resource.data.seats.get('north', null) == null
+              || request.resource.data.seats.get('south', null)
+                != request.resource.data.seats.get('north', null))
+            && (request.resource.data.seats.get('west', null) == null
+              || request.resource.data.seats.get('north', null) == null
+              || request.resource.data.seats.get('west', null)
+                != request.resource.data.seats.get('north', null))
+            && (resource.data.playerCount != 3
+              || request.resource.data.seats.get('north', null) == null)
+          )
+        );
+      allow delete: if signedIn()
         && resource.data.ownerUid == request.auth.uid;
+
+      match /members/{userId} {
+        // 待機中ロビーの参加者一覧はログイン済みユーザーが取得できる。
+        allow get, list: if signedIn()
+          && get(/databases/$(database)/documents/tables/$(tableId)).data.status == 'waiting';
+
+        // 自分自身の参加情報だけを登録できる。
+        // 卓作成時のオーナー情報は親卓と同じ batch で作成するため getAfter を使う。
+        allow create: if signedIn()
+          && request.auth.uid == userId
+          && getAfter(/databases/$(database)/documents/tables/$(tableId)).data.status == 'waiting'
+          && (
+            // 卓作成時は、オーナー情報を親卓と同じ batch で登録する。
+            (
+              !exists(/databases/$(database)/documents/tables/$(tableId))
+              && getAfter(/databases/$(database)/documents/tables/$(tableId)).data.ownerUid == request.auth.uid
+            )
+            // 既存卓への参加時は、親卓の参加人数も同時に1人増やす。
+            || (
+              exists(/databases/$(database)/documents/tables/$(tableId))
+              && getAfter(/databases/$(database)/documents/tables/$(tableId)).data.memberCount
+                == get(/databases/$(database)/documents/tables/$(tableId)).data.get('memberCount', 1) + 1
+            )
+          );
+
+        // 参加情報の変更・削除は別機能として扱う。
+        allow update, delete: if false;
+      }
     }
   }
 }
