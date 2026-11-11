@@ -256,7 +256,6 @@ void main() {
       ));
     });
   });
-}
 
 
   group('TableRepository.assignSeat', () {
@@ -277,4 +276,4 @@ void main() {
       verifyNever(store.assignSeat(any, any, any));
     });
   });
-
+}
