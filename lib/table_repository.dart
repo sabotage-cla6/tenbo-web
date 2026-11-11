@@ -147,6 +147,8 @@ class FirestoreTableStore implements TableStore {
     final tableRef = _firestore.collection('tables').doc(tableId);
     final memberRef = tableRef.collection('members').doc(uid);
 
+    final existingMembers = await tableRef.collection('members').get();
+
     await _firestore.runTransaction((transaction) async {
       final tableSnapshot = await transaction.get(tableRef);
       if (!tableSnapshot.exists || tableSnapshot.data()?['status'] != 'waiting') {
@@ -156,10 +158,8 @@ class FirestoreTableStore implements TableStore {
       final memberSnapshot = await transaction.get(memberRef);
       if (memberSnapshot.exists) return;
 
-      final membersSnapshot =
-          await transaction.get(tableRef.collection('members'));
       final capacity = (tableSnapshot.data()?['playerCount'] as num?)?.toInt() ?? 4;
-      if (membersSnapshot.docs.length >= capacity) {
+      if (existingMembers.docs.length >= capacity) {
         throw StateError('この卓は満員です。');
       }
 
