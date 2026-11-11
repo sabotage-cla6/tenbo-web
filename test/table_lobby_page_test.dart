@@ -6,6 +6,8 @@ import 'package:tenbo_web/table_repository.dart';
 Widget buildLobby({
   int playerCount = 4,
   Stream<List<TableMember>>? membersStream,
+  Stream<Map<String, String?>>? seatsStream,
+  Future<void> Function(String wind)? assignSeat,
 }) {
   return MaterialApp(
     home: TableLobbyPage(
@@ -20,6 +22,14 @@ Widget buildLobby({
           isOwner: true,
         ),
       ]),
+      seatsStream: seatsStream ?? Stream.value(const {
+        '東': null,
+        '南': null,
+        '西': null,
+        '北': null,
+      }),
+      currentUserUid: 'owner-1',
+      assignSeat: assignSeat,
       settings: const {
         'startingPoints': 25000,
         'returnPoints': 30000,
@@ -46,8 +56,8 @@ void main() {
       expect(find.text('4人麻雀 ・ 25,000点持ち ・ 30,000点返し'), findsOneWidget);
       expect(find.text('テストプレイヤー'), findsOneWidget);
       expect(find.text('オーナー'), findsOneWidget);
-      expect(find.text('1 / 4 人'), findsOneWidget);
-      expect(find.text('参加者を待っています'), findsNWidgets(3));
+      expect(find.text('参加者 1人'), findsOneWidget);
+      expect(find.text('空席（クリックして参加）'), findsNWidgets(4));
       expect(find.text('東'), findsOneWidget);
       expect(find.text('南'), findsOneWidget);
       expect(find.text('西'), findsOneWidget);
@@ -74,21 +84,35 @@ void main() {
       );
       await tester.pump();
 
-      expect(find.text('2 / 4 人'), findsOneWidget);
+      expect(find.text('参加者 2人'), findsOneWidget);
       expect(find.text('テストプレイヤー'), findsOneWidget);
       expect(find.text('参加者2'), findsOneWidget);
-      expect(find.text('参加者を待っています'), findsNWidgets(2));
+      expect(find.text('空席（クリックして参加）'), findsNWidgets(4));
     });
 
     testWidgets('三人麻雀では座席を3つだけ表示する', (tester) async {
       await tester.pumpWidget(buildLobby(playerCount: 3));
 
-      expect(find.text('1 / 3 人'), findsOneWidget);
+      expect(find.text('参加者 1人'), findsOneWidget);
       expect(find.text('東'), findsOneWidget);
       expect(find.text('南'), findsOneWidget);
       expect(find.text('西'), findsOneWidget);
       expect(find.text('北'), findsNothing);
-      expect(find.text('参加者を待っています'), findsNWidgets(2));
+      expect(find.text('空席（クリックして参加）'), findsNWidgets(3));
+    });
+
+    testWidgets('座席をクリックすると自分をその方角へ割り当てる', (tester) async {
+      String? selectedWind;
+      await tester.pumpWidget(
+        buildLobby(assignSeat: (wind) async {
+          selectedWind = wind;
+        }),
+      );
+
+      await tester.tap(find.text('空席（クリックして参加）').first);
+      await tester.pump();
+
+      expect(selectedWind, '東');
     });
 
     testWidgets('参加者が揃うまでは対局開始ボタンを無効にする',
