@@ -247,7 +247,20 @@ class TableLobbyPage extends StatelessWidget {
                         ),
                       ],
                       builder: (context, snapshot) {
-                        final members = snapshot.data ?? const <TableMember>[];
+                        final loadedMembers =
+                            snapshot.data ?? const <TableMember>[];
+                        final hasOwner =
+                            loadedMembers.any((member) => member.isOwner);
+                        final members = hasOwner
+                            ? loadedMembers
+                            : [
+                                TableMember(
+                                  uid: 'owner',
+                                  displayName: ownerName,
+                                  isOwner: true,
+                                ),
+                                ...loadedMembers,
+                              ];
                         final visibleMembers =
                             members.take(safePlayerCount).toList();
                         return _LobbyCard(
