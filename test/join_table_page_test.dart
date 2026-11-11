@@ -35,6 +35,8 @@ void main() {
             registerMember: (tableId) async {
               registeredTableId = tableId;
             },
+            currentUserUid: 'guest-2',
+            seatsStream: Stream.value(const {'東': null, '南': null, '西': null, '北': null}),
             membersStream: Stream.value(const [
               TableMember(uid: 'owner-1', displayName: '作成者', isOwner: true),
               TableMember(uid: 'guest-2', displayName: '参加者2', isOwner: false),
