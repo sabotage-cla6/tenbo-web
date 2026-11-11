@@ -46,7 +46,20 @@ service cloud.firestore {
         // 卓作成時のオーナー情報は親卓と同じ batch で作成するため getAfter を使う。
         allow create: if signedIn()
           && request.auth.uid == userId
-          && getAfter(/databases/$(database)/documents/tables/$(tableId)).data.status == 'waiting';
+          && getAfter(/databases/$(database)/documents/tables/$(tableId)).data.status == 'waiting'
+          && (
+            // 卓作成時は、オーナー情報を親卓と同じ batch で登録する。
+            (
+              !exists(/databases/$(database)/documents/tables/$(tableId))
+              && getAfter(/databases/$(database)/documents/tables/$(tableId)).data.ownerUid == request.auth.uid
+            )
+            // 既存卓への参加時は、親卓の参加人数も同時に1人増やす。
+            || (
+              exists(/databases/$(database)/documents/tables/$(tableId))
+              && getAfter(/databases/$(database)/documents/tables/$(tableId)).data.memberCount
+                == get(/databases/$(database)/documents/tables/$(tableId)).data.memberCount + 1
+            )
+          );
 
         // 参加情報の変更・削除は別機能として扱う。
         allow update, delete: if false;
