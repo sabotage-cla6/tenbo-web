@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'game_page.dart';
 import 'table_repository.dart';
 
 const _ink = Color(0xFF18352E);
@@ -421,6 +422,53 @@ class TableLobbyPage extends StatelessWidget {
                                         ),
                                       const SizedBox(height: 14),
                                       _buildDealerButtons(context, seats, safePlayerCount),
+                                      const SizedBox(height: 18),
+                                      Builder(
+                                        builder: (context) {
+                                          final seatedPlayers = <String, String?>{
+                                            for (final wind in _winds.take(safePlayerCount))
+                                              wind: memberByUid[seats[wind]]?.displayName,
+                                          };
+                                          final allSeatsFilled = seatedPlayers.values.every(
+                                            (name) => name != null && name.trim().isNotEmpty,
+                                          );
+                                          return FilledButton.icon(
+                                            onPressed: allSeatsFilled
+                                                ? () {
+                                                    Navigator.of(context).push(
+                                                      MaterialPageRoute<void>(
+                                                        builder: (_) => GamePage(
+                                                          tableName: tableName,
+                                                          playerCount: safePlayerCount,
+                                                          players: seatedPlayers,
+                                                          startingPoints:
+                                                              (settings['startingPoints'] as num?)
+                                                                      ?.toInt() ??
+                                                                  25000,
+                                                        ),
+                                                      ),
+                                                    );
+                                                  }
+                                                : null,
+                                            icon: const Icon(Icons.play_arrow),
+                                            label: Text(
+                                              allSeatsFilled
+                                                  ? '対局を開始する'
+                                                  : '参加者が揃うと対局を開始できます',
+                                            ),
+                                            style: FilledButton.styleFrom(
+                                              backgroundColor: _green,
+                                              foregroundColor: Colors.white,
+                                              disabledBackgroundColor:
+                                                  const Color(0xFFB7C3BC),
+                                              disabledForegroundColor: Colors.white,
+                                              padding: const EdgeInsets.symmetric(
+                                                vertical: 16,
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                      ),
                                     ],
                                   );
                                 },
@@ -452,19 +500,6 @@ class TableLobbyPage extends StatelessWidget {
                       },
                     ),
                     const SizedBox(height: 14),
-                    const SizedBox(height: 22),
-                    FilledButton.icon(
-                      onPressed: null,
-                      icon: const Icon(Icons.play_arrow),
-                      label: const Text('参加者が揃うと対局を開始できます'),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: _green,
-                        foregroundColor: Colors.white,
-                        disabledBackgroundColor: const Color(0xFFB7C3BC),
-                        disabledForegroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                      ),
-                    ),
                     const SizedBox(height: 10),
                     OutlinedButton.icon(
                       onPressed: () => Navigator.of(context).pop(),
