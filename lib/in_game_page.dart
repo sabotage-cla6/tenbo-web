@@ -37,7 +37,8 @@ class InGamePage extends StatelessWidget {
   final TableRepository? repository;
   final Future<void> Function()? onRiichi;
 
-  TableRepository get _repository => repository ?? TableRepository();
+  TableRepository get _repository => repository ??
+      (throw StateError('対局画面にはTableRepositoryの指定が必要です。'));
 
   Future<void> _confirmRiichi(BuildContext context) async {
     final confirmed = await showDialog<bool>(
