@@ -163,7 +163,9 @@ void main() {
       );
       await tester.pump();
 
-      await tester.tap(find.widgetWithText(InkWell, '参加者2'));
+      final occupiedSeat = find.widgetWithText(InkWell, '参加者2');
+      await tester.ensureVisible(occupiedSeat);
+      await tester.tap(occupiedSeat);
       await tester.pump();
 
       expect(selectedWind, '東');
