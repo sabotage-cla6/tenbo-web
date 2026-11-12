@@ -20,6 +20,7 @@ class InGamePage extends StatelessWidget {
     this.tableId,
     this.currentUserUid,
     this.gameStateStream,
+    this.repository,
     this.onRiichi,
     super.key,
   });
@@ -33,7 +34,10 @@ class InGamePage extends StatelessWidget {
   final String? tableId;
   final String? currentUserUid;
   final Stream<GameState>? gameStateStream;
+  final TableRepository? repository;
   final Future<void> Function()? onRiichi;
+
+  TableRepository get _repository => repository ?? TableRepository();
 
   Future<void> _confirmRiichi(BuildContext context) async {
     final confirmed = await showDialog<bool>(
@@ -52,7 +56,7 @@ class InGamePage extends StatelessWidget {
       if (onRiichi != null) {
         await onRiichi!();
       } else if (tableId != null) {
-        await TableRepository().declareRiichi(tableId!);
+        await _repository.declareRiichi(tableId!);
       } else {
         throw StateError('卓情報を取得できません。');
       }
@@ -71,7 +75,7 @@ class InGamePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final stream = gameStateStream ?? (tableId == null ? null : TableRepository().watchGameState(tableId!));
+    final stream = gameStateStream ?? (tableId == null ? null : _repository.watchGameState(tableId!));
     if (stream == null) return _buildPage(context, null);
     return StreamBuilder<GameState>(
       stream: stream,
@@ -96,7 +100,7 @@ class InGamePage extends StatelessWidget {
     final displayRound = gameState == null ? round : '$roundWind' + gameState.round.number.toString() + '局';
     final displayHonba = gameState?.round.honba ?? honba;
     final displayKyotaku = gameState == null ? kyotaku : gameState.kyotakuSticks * 1000;
-    final selfUid = currentUserUid ?? (tableId == null ? null : TableRepository().currentUserUid);
+    final selfUid = currentUserUid ?? (tableId == null ? null : _repository.currentUserUid);
     final selfMatches = selfUid == null ? <GamePlayer>[] : displayPlayers.where((player) => player.uid == selfUid).toList();
     final selfPlayer = selfMatches.isEmpty ? null : selfMatches.first;
     GamePlayer? findPlayer(String wind) {
