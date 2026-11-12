@@ -43,7 +43,7 @@ Widget buildLobby({
       statusStream: statusStream ?? Stream<String>.value('waiting'),
       startGame: startGame,
       currentUserUid: currentUserUid,
-      repository: repository,
+      repository: repository ?? MockTableRepository(),
       assignSeat: assignSeat,
       randomizeSeats: randomizeSeats,
       chooseDealer: chooseDealer,
@@ -348,6 +348,7 @@ void main() {
                           playerCount: 4,
                           ownerName: 'テストプレイヤー',
                           currentUserUid: 'owner-1',
+                          repository: MockTableRepository(),
                           statusStream: Stream<String>.value('waiting'),
                           seatsStream: Stream.value(const {'東': null, '南': null, '西': null, '北': null}).asBroadcastStream(),
                           membersStream: Stream.value(const [
