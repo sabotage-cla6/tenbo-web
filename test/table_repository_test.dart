@@ -65,6 +65,14 @@ class MockTableStore extends Mock implements TableStore {
       ) as Stream<String>;
 
   @override
+  Stream<GameState> watchGameState(String? tableId) =>
+      super.noSuchMethod(Invocation.method(#watchGameState, [tableId]),
+        returnValue: const Stream<GameState>.empty()) as Stream<GameState>;
+  @override
+  Future<void> declareRiichi(String? tableId, String? uid) =>
+      super.noSuchMethod(Invocation.method(#declareRiichi, [tableId, uid]),
+        returnValue: Future<void>.value()) as Future<void>;
+  @override
   Future<void> startGame(String? tableId, String? uid) =>
       super.noSuchMethod(
         Invocation.method(#startGame, [tableId, uid]),
@@ -123,6 +131,7 @@ void main() {
     )).thenAnswer((_) async {});
     when(store.assignSeat(any, any, any)).thenAnswer((_) async {});
     when(store.startGame(any, any)).thenAnswer((_) async {});
+    when(store.declareRiichi(any, any)).thenAnswer((_) async {});
     when(store.randomizeSeats(any, any, any)).thenAnswer((_) async {});
     when(store.chooseDealer(any, any, any)).thenAnswer((_) async {});
   });
@@ -318,6 +327,17 @@ void main() {
     });
   });
 
+  group('TableRepository.declareRiichi', () {
+    test('ログイン中のユーザーとしてリーチをStoreへ依頼する', () async {
+      await repository.declareRiichi('table-123');
+      verify(store.declareRiichi('table-123', 'user-123')).called(1);
+    });
+    test('未ログインならリーチを依頼しない', () async {
+      when(auth.currentUser).thenReturn(null);
+      await expectLater(repository.declareRiichi('table-123'), throwsA(isA<StateError>()));
+      verifyNever(store.declareRiichi(any, any));
+    });
+  });
   group('TableRepository.assignSeat', () {
     test('ログイン中のユーザーを指定した座席へ割り当てる', () async {
       await repository.assignSeat('table-123', '北');

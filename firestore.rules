@@ -28,6 +28,7 @@ service cloud.firestore {
         && (
           (
             resource.data.ownerUid == request.auth.uid
+            && resource.data.status == 'waiting'
             && request.resource.data.status == resource.data.status
           )
           || (
@@ -89,8 +90,13 @@ service cloud.firestore {
             // 対局開始は、着席済みの参加者が全席充足を確認して状態だけを変更する場合に許可。
             resource.data.status == 'waiting'
             && request.resource.data.diff(resource.data).affectedKeys()
-              .hasOnly(['status', 'updatedAt'])
+              .hasOnly(['status', 'game', 'updatedAt'])
             && request.resource.data.status == 'playing'
+            && request.resource.data.game.round.wind == 'east'
+            && request.resource.data.game.round.number == 1
+            && request.resource.data.game.round.honba == 0
+            && request.resource.data.game.round.seq == 1
+            && request.resource.data.game.kyotakuSticks == 0
             && exists(/databases/$(database)/documents/tables/$(tableId)/members/$(request.auth.uid))
             && (
               request.resource.data.seats.get('east', null) == request.auth.uid
@@ -127,6 +133,26 @@ service cloud.firestore {
                 && request.resource.data.seats.west != request.resource.data.seats.north
               )
             )
+          )
+          || (
+            // リーチは本人の持ち点・リーチ状態・供託本数を同時に更新する。
+            resource.data.status == 'playing'
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['game', 'updatedAt'])
+            && exists(/databases/$(database)/documents/tables/$(tableId)/members/$(request.auth.uid))
+            && (
+              resource.data.seats.get('east', null) == request.auth.uid
+              || resource.data.seats.get('south', null) == request.auth.uid
+              || resource.data.seats.get('west', null) == request.auth.uid
+              || resource.data.seats.get('north', null) == request.auth.uid
+            )
+            && request.resource.data.game.diff(resource.data.game).affectedKeys().hasOnly(['players', 'kyotakuSticks'])
+            && request.resource.data.game.players.diff(resource.data.game.players).affectedKeys().hasOnly([request.auth.uid])
+            && request.resource.data.game.players[request.auth.uid].diff(resource.data.game.players[request.auth.uid]).affectedKeys().hasOnly(['score', 'isRiichi'])
+            && resource.data.game.players[request.auth.uid].isRiichi == false
+            && request.resource.data.game.players[request.auth.uid].isRiichi == true
+            && request.resource.data.game.players[request.auth.uid].score == resource.data.game.players[request.auth.uid].score - 1000
+            && resource.data.game.players[request.auth.uid].score >= 1000
+            && request.resource.data.game.kyotakuSticks == resource.data.game.kyotakuSticks + 1
           )
         );
       allow delete: if signedIn()

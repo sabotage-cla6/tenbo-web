@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 
+import 'table_repository.dart';
+
 const _ink = Color(0xFF18352E);
 const _green = Color(0xFF245447);
 const _gold = Color(0xFFD7B56D);
 const _paper = Color(0xFFF7F5EF);
 
 /// 対局中の卓・点数・操作メニューを表示するトップ画面。
-/// 点数更新や局進行などの対局処理は、現段階では行わない。
+/// Firestoreの対局状態を購読し、リーチ操作を行う対局画面。
 class InGamePage extends StatelessWidget {
   const InGamePage({
     required this.tableName,
@@ -15,6 +17,10 @@ class InGamePage extends StatelessWidget {
     this.honba = 0,
     this.kyotaku = 0,
     this.startingPoints = 25000,
+    this.tableId,
+    this.currentUserUid,
+    this.gameStateStream,
+    this.onRiichi,
     super.key,
   });
 
@@ -24,12 +30,44 @@ class InGamePage extends StatelessWidget {
   final int honba;
   final int kyotaku;
   final int startingPoints;
+  final String? tableId;
+  final String? currentUserUid;
+  final Stream<GameState>? gameStateStream;
+  final Future<void> Function()? onRiichi;
 
   GamePlayer? _playerAt(String wind) {
     for (final player in players) {
       if (player.wind == wind) return player;
     }
     return null;
+  }
+
+  Future<void> _confirmRiichi(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('リーチしますか？'),
+        content: const Text('持ち点から1,000点を供託し、リーチ状態にします。'),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(dialogContext).pop(false), child: const Text('キャンセル')),
+          FilledButton(onPressed: () => Navigator.of(dialogContext).pop(true), child: const Text('リーチする')),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      if (onRiichi != null) {
+        await onRiichi!();
+      } else if (tableId != null) {
+        await TableRepository().declareRiichi(tableId!);
+      } else {
+        throw StateError('卓情報を取得できません。');
+      }
+    } catch (error) {
+      if (!context.mounted) return;
+      final message = error is StateError ? error.message.toString() : 'リーチに失敗しました。';
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    }
   }
 
   void _showAction(BuildContext context, String action) {
@@ -40,7 +78,39 @@ class InGamePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isSanma = !players.any((player) => player.wind == '北');
+    final stream = gameStateStream ?? (tableId == null ? null : TableRepository().watchGameState(tableId!));
+    if (stream == null) return _buildPage(context, null);
+    return StreamBuilder<GameState>(
+      stream: stream,
+      builder: (context, snapshot) => _buildPage(context, snapshot.data),
+    );
+  }
+
+  Widget _buildPage(BuildContext context, GameState? gameState) {
+    final displayPlayers = players.map((player) {
+      final state = player.uid == null ? null : gameState?.players[player.uid];
+      return GamePlayer(
+        uid: player.uid, wind: player.wind, name: player.name,
+        score: state?.score ?? player.score,
+        isDealer: player.isDealer,
+        isRiichi: state?.isRiichi ?? player.isRiichi,
+        isYakitori: player.isYakitori,
+      );
+    }).toList();
+    final roundWind = gameState?.round.wind == 'south' ? '南'
+        : gameState?.round.wind == 'west' ? '西'
+        : gameState?.round.wind == 'north' ? '北' : '東';
+    final displayRound = gameState == null ? round : '$roundWind' + gameState.round.number.toString() + '局';
+    final displayHonba = gameState?.round.honba ?? honba;
+    final displayKyotaku = gameState == null ? kyotaku : gameState.kyotakuSticks * 1000;
+    final selfUid = currentUserUid ?? (tableId == null ? null : TableRepository().currentUserUid);
+    final selfMatches = selfUid == null ? <GamePlayer>[] : displayPlayers.where((player) => player.uid == selfUid).toList();
+    final selfPlayer = selfMatches.isEmpty ? null : selfMatches.first;
+    GamePlayer? findPlayer(String wind) {
+      final matching = displayPlayers.where((player) => player.wind == wind);
+      return matching.isEmpty ? null : matching.first;
+    }
+    final isSanma = !displayPlayers.any((player) => player.wind == '北');
     return Scaffold(
       backgroundColor: _paper,
       appBar: AppBar(
@@ -83,7 +153,7 @@ class InGamePage extends StatelessWidget {
                   children: [
                     _GameInfoBar(
                       tableName: tableName,
-                      round: round,
+                      round: displayRound,
                       startingPoints: startingPoints,
                     ),
                     const SizedBox(height: 14),
@@ -124,13 +194,13 @@ class InGamePage extends StatelessWidget {
                                     crossAxisSpacing: 7,
                                     children: [
                                       const SizedBox.shrink(),
-                                      _PlayerPanel(player: _playerAt('北'), startingPoints: startingPoints),
+                                      _PlayerPanel(player: findPlayer('北'), startingPoints: startingPoints, isSelf: selfUid != null && findPlayer('北')?.uid == selfUid),
                                       const SizedBox.shrink(),
-                                      _PlayerPanel(player: _playerAt('東'), startingPoints: startingPoints),
-                                      _RoundPanel(round: round, honba: honba, kyotaku: kyotaku),
-                                      _PlayerPanel(player: _playerAt('西'), startingPoints: startingPoints),
+                                      _PlayerPanel(player: findPlayer('東'), startingPoints: startingPoints, isSelf: selfUid != null && findPlayer('東')?.uid == selfUid),
+                                      _RoundPanel(round: displayRound, honba: displayHonba, kyotaku: displayKyotaku),
+                                      _PlayerPanel(player: findPlayer('西'), startingPoints: startingPoints, isSelf: selfUid != null && findPlayer('西')?.uid == selfUid),
                                       const SizedBox.shrink(),
-                                      _PlayerPanel(player: _playerAt('南'), isSelf: true, startingPoints: startingPoints),
+                                      _PlayerPanel(player: findPlayer('南'), isSelf: selfUid != null && findPlayer('南')?.uid == selfUid, startingPoints: startingPoints),
                                       const SizedBox.shrink(),
                                     ],
                                   ),
@@ -142,7 +212,11 @@ class InGamePage extends StatelessWidget {
                       },
                     ),
                     const SizedBox(height: 14),
-                    _ActionDock(onAction: (action) => _showAction(context, action)),
+                    _ActionDock(
+                      onAction: (action) => _showAction(context, action),
+                      onRiichi: selfPlayer != null && !selfPlayer.isRiichi && selfPlayer.score >= 1000
+                          ? () => _confirmRiichi(context) : null,
+                    ),
                     const SizedBox(height: 10),
                     Text(
                       isSanma ? '三人麻雀' : '四人麻雀',
@@ -167,8 +241,10 @@ class GamePlayer {
     this.isDealer = false,
     this.isRiichi = false,
     this.isYakitori = false,
+    this.uid,
   });
 
+  final String? uid;
   final String wind;
   final String name;
   final int score;
@@ -358,9 +434,10 @@ class _RoundPanel extends StatelessWidget {
 }
 
 class _ActionDock extends StatelessWidget {
-  const _ActionDock({required this.onAction});
+  const _ActionDock({required this.onAction, this.onRiichi});
 
   final ValueChanged<String> onAction;
+  final VoidCallback? onRiichi;
 
   @override
   Widget build(BuildContext context) {
@@ -382,10 +459,10 @@ class _ActionDock extends StatelessWidget {
       children: [
         for (final action in actions)
           Material(
-            color: action.color,
+            color: action.title == 'リーチ' && onRiichi == null ? Colors.grey : action.color,
             borderRadius: BorderRadius.circular(12),
             child: InkWell(
-              onTap: () => onAction(action.title),
+              onTap: action.title == 'リーチ' ? onRiichi : () => onAction(action.title),
               borderRadius: BorderRadius.circular(12),
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),

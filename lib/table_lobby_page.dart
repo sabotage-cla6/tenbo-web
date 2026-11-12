@@ -443,6 +443,7 @@ class TableLobbyPage extends StatelessWidget {
                                           final gamePlayers = [
                                             for (final wind in _winds.take(safePlayerCount))
                                               GamePlayer(
+                                                uid: seats[wind],
                                                 wind: wind,
                                                 name: seatedPlayers[wind] ?? '参加者',
                                                 score: startingPoints,
@@ -461,6 +462,8 @@ class TableLobbyPage extends StatelessWidget {
                                                 tableName: tableName,
                                                 players: gamePlayers,
                                                 startingPoints: startingPoints,
+                                                tableId: tableId,
+                                                currentUserUid: currentUserUid ?? TableRepository().currentUserUid,
                                                 child: FilledButton.icon(
                                                   onPressed: allSeatsFilled && isWaiting
                                                       ? () => _runSeatAction(
@@ -683,6 +686,8 @@ class _GameStatusRedirect extends StatefulWidget {
     required this.tableName,
     required this.players,
     required this.startingPoints,
+    required this.tableId,
+    required this.currentUserUid,
     required this.child,
   });
 
@@ -690,6 +695,8 @@ class _GameStatusRedirect extends StatefulWidget {
   final String tableName;
   final List<GamePlayer> players;
   final int startingPoints;
+  final String tableId;
+  final String? currentUserUid;
   final Widget child;
 
   @override
@@ -724,6 +731,8 @@ class _GameStatusRedirectState extends State<_GameStatusRedirect> {
             tableName: widget.tableName,
             players: widget.players,
             startingPoints: widget.startingPoints,
+            tableId: widget.tableId,
+            currentUserUid: widget.currentUserUid,
           ),
         ),
       );

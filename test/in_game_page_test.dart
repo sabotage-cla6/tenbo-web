@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tenbo_web/in_game_page.dart';
+import 'package:tenbo_web/table_repository.dart';
 
 void main() {
   const players = [
@@ -57,6 +60,58 @@ void main() {
       expect(find.text('東家'), findsOneWidget);
       expect(find.text('南家'), findsOneWidget);
       expect(find.text('西家'), findsOneWidget);
+    });
+
+
+    testWidgets('リーチ後のFirestore状態を画面に反映する', (tester) async {
+      final controller = StreamController<GameState>();
+      var riichiCalled = false;
+      const statePlayers = [
+        GamePlayer(uid: 'east-uid', wind: '東', name: '東家', score: 25000, isDealer: true),
+        GamePlayer(uid: 'south-uid', wind: '南', name: '南家', score: 25000),
+        GamePlayer(uid: 'west-uid', wind: '西', name: '西家', score: 25000),
+        GamePlayer(uid: 'north-uid', wind: '北', name: '北家', score: 25000),
+      ];
+      await tester.pumpWidget(MaterialApp(home: InGamePage(
+        tableName: 'テスト卓', players: statePlayers, tableId: 'table-123',
+        currentUserUid: 'south-uid', gameStateStream: controller.stream,
+        onRiichi: () async { riichiCalled = true; },
+      )));
+      controller.add(const GameState(
+        round: GameRound(wind: 'east', number: 1, honba: 0, seq: 1),
+        kyotakuSticks: 0,
+        players: {
+          'east-uid': GamePlayerState(score: 25000, isRiichi: false),
+          'south-uid': GamePlayerState(score: 25000, isRiichi: false),
+          'west-uid': GamePlayerState(score: 25000, isRiichi: false),
+          'north-uid': GamePlayerState(score: 25000, isRiichi: false),
+        },
+      ));
+      await tester.pump();
+      final riichiButton = find.text('リーチ');
+      await tester.ensureVisible(riichiButton);
+      await tester.pumpAndSettle();
+      await tester.tap(riichiButton);
+      await tester.pumpAndSettle();
+      expect(find.text('リーチしますか？'), findsOneWidget);
+      await tester.tap(find.text('リーチする'));
+      await tester.pump();
+      expect(riichiCalled, isTrue);
+      controller.add(const GameState(
+        round: GameRound(wind: 'east', number: 1, honba: 0, seq: 1),
+        kyotakuSticks: 1,
+        players: {
+          'east-uid': GamePlayerState(score: 25000, isRiichi: false),
+          'south-uid': GamePlayerState(score: 24000, isRiichi: true),
+          'west-uid': GamePlayerState(score: 25000, isRiichi: false),
+          'north-uid': GamePlayerState(score: 25000, isRiichi: false),
+        },
+      ));
+      await tester.pump();
+      expect(find.text('24,000'), findsOneWidget);
+      expect(find.text('1,000点'), findsOneWidget);
+      expect(find.text('⚡ 立直'), findsOneWidget);
+      await controller.close();
     });
 
     testWidgets('操作ボタンは未実装であることを案内する', (tester) async {

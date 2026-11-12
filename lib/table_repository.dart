@@ -3,6 +3,49 @@ import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+/// 対局中の局情報。
+class GameRound {
+  const GameRound({required this.wind, required this.number, required this.honba, required this.seq});
+  final String wind;
+  final int number;
+  final int honba;
+  final int seq;
+  factory GameRound.fromMap(Map<String, dynamic> data) => GameRound(
+    wind: data['wind'] as String? ?? 'east',
+    number: (data['number'] as num?)?.toInt() ?? 1,
+    honba: (data['honba'] as num?)?.toInt() ?? 0,
+    seq: (data['seq'] as num?)?.toInt() ?? 1,
+  );
+}
+class GamePlayerState {
+  const GamePlayerState({required this.score, required this.isRiichi});
+  final int score;
+  final bool isRiichi;
+}
+class GameState {
+  const GameState({required this.round, required this.kyotakuSticks, required this.players});
+  final GameRound round;
+  final int kyotakuSticks;
+  final Map<String, GamePlayerState> players;
+  factory GameState.fromMap(Map<String, dynamic> data) {
+    final rawRound = data['round'];
+    final rawPlayers = data['players'];
+    return GameState(
+      round: GameRound.fromMap(rawRound is Map ? Map<String, dynamic>.from(rawRound) : const {}),
+      kyotakuSticks: (data['kyotakuSticks'] as num?)?.toInt() ?? 0,
+      players: {
+        if (rawPlayers is Map)
+          for (final entry in rawPlayers.entries)
+            if (entry.value is Map)
+              entry.key.toString(): GamePlayerState(
+                score: ((entry.value as Map)['score'] as num?)?.toInt() ?? 0,
+                isRiichi: (entry.value as Map)['isRiichi'] == true,
+              ),
+      },
+    );
+  }
+}
+
 /// アプリケーション側で扱うログインユーザー情報。
 class TableUser {
   const TableUser({required this.uid, this.displayName, this.email});
@@ -87,6 +130,8 @@ abstract interface class TableStore {
   Stream<List<TableMember>> watchMembers(String tableId);
   Stream<Map<String, String?>> watchSeats(String tableId);
   Stream<String> watchStatus(String tableId);
+  Stream<GameState> watchGameState(String tableId);
+  Future<void> declareRiichi(String tableId, String uid);
   Future<void> startGame(String tableId, String uid);
   Future<void> assignSeat(String tableId, String wind, String uid);
   Future<void> randomizeSeats(String tableId, int playerCount, String uid);
@@ -202,6 +247,46 @@ class FirestoreTableStore implements TableStore {
   }
 
   @override
+  Stream<GameState> watchGameState(String tableId) {
+    return _firestore.collection('tables').doc(tableId).snapshots().map((snapshot) {
+      final rawGame = snapshot.data()?['game'];
+      if (rawGame is! Map) throw StateError('対局情報を取得できません。');
+      return GameState.fromMap(Map<String, dynamic>.from(rawGame));
+    });
+  }
+  @override
+  Future<void> declareRiichi(String tableId, String uid) async {
+    final tableRef = _firestore.collection('tables').doc(tableId);
+    final memberRef = tableRef.collection('members').doc(uid);
+    await _firestore.runTransaction((transaction) async {
+      final tableSnapshot = await transaction.get(tableRef);
+      final memberSnapshot = await transaction.get(memberRef);
+      if (!tableSnapshot.exists || tableSnapshot.data()?['status'] != 'playing') {
+        throw StateError('対局中の卓が見つかりません。');
+      }
+      if (!memberSnapshot.exists) throw StateError('卓の参加者だけがリーチできます。');
+      final data = tableSnapshot.data()!;
+      final seats = data['seats'];
+      if (seats is! Map || !seats.values.contains(uid)) throw StateError('対局者だけがリーチできます。');
+      final rawGame = data['game'];
+      if (rawGame is! Map) throw StateError('対局情報を取得できません。');
+      final game = Map<String, dynamic>.from(rawGame);
+      final rawPlayers = game['players'];
+      if (rawPlayers is! Map || rawPlayers[uid] is! Map) throw StateError('プレイヤー情報を取得できません。');
+      final players = Map<String, dynamic>.from(rawPlayers);
+      final player = Map<String, dynamic>.from(players[uid] as Map);
+      if (player['isRiichi'] == true) throw StateError('既にリーチしています。');
+      final score = (player['score'] as num?)?.toInt() ?? 0;
+      if (score < 1000) throw StateError('リーチには1,000点以上必要です。');
+      player['score'] = score - 1000;
+      player['isRiichi'] = true;
+      players[uid] = player;
+      game['players'] = players;
+      game['kyotakuSticks'] = ((game['kyotakuSticks'] as num?)?.toInt() ?? 0) + 1;
+      transaction.update(tableRef, {'game': game, 'updatedAt': FieldValue.serverTimestamp()});
+    });
+  }
+  @override
   Future<void> startGame(String tableId, String uid) async {
     final tableRef = _firestore.collection('tables').doc(tableId);
     final memberRef = tableRef.collection('members').doc(uid);
@@ -235,8 +320,18 @@ class FirestoreTableStore implements TableStore {
         throw StateError('対局者だけが対局を開始できます。');
       }
 
+      final settings = data['settings'];
+      final startingPoints = settings is Map ? (settings['startingPoints'] as num?)?.toInt() ?? 25000 : 25000;
+      final initialPlayers = <String, dynamic>{
+        for (final seatedUid in seatedUids) seatedUid: {'score': startingPoints, 'isRiichi': false},
+      };
       transaction.update(tableRef, {
         'status': 'playing',
+        'game': {
+          'round': {'wind': 'east', 'number': 1, 'honba': 0, 'seq': 1},
+          'kyotakuSticks': 0,
+          'players': initialPlayers,
+        },
         'updatedAt': FieldValue.serverTimestamp(),
       });
     });
@@ -499,10 +594,17 @@ class TableRepository {
   }
 
   Stream<String> watchStatus(String tableId) {
-    if (_auth.currentUser == null) {
-      return Stream.error(StateError('卓の状態を取得するにはログインが必要です。'));
-    }
+    if (_auth.currentUser == null) return Stream.error(StateError('卓の状態を取得するにはログインが必要です。'));
     return _store.watchStatus(tableId);
+  }
+  Stream<GameState> watchGameState(String tableId) {
+    if (_auth.currentUser == null) return Stream.error(StateError('対局情報を取得するにはログインが必要です。'));
+    return _store.watchGameState(tableId);
+  }
+  Future<void> declareRiichi(String tableId) async {
+    final uid = currentUserUid;
+    if (uid == null) throw StateError('リーチするにはログインが必要です。');
+    await _store.declareRiichi(tableId, uid);
   }
 
   Future<void> startGame(String tableId) async {
