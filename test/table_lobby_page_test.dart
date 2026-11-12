@@ -71,7 +71,6 @@ void main() {
       expect(find.text('北'), findsOneWidget);
     });
 
-
     testWidgets('Firestoreから届いた参加者を複数表示する', (tester) async {
       await tester.pumpWidget(
         buildLobby(
@@ -118,8 +117,14 @@ void main() {
     });
 
     testWidgets('全員が着席すると対局中画面へ遷移する', (tester) async {
-      await tester.view.setPhysicalSize(const Size(900, 1200));
-      await tester.view.setDevicePixelRatio(1);
+      // 対局開始ボタンが画面内に収まるサイズでテストする。
+      tester.view.physicalSize = const Size(900, 1200);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
       await tester.pumpWidget(
         buildLobby(
           membersStream: Stream.value(const [
@@ -146,8 +151,6 @@ void main() {
       expect(find.text('対局中'), findsOneWidget);
       expect(find.text('プレイヤーA'), findsOneWidget);
       expect(find.text('プレイヤーD'), findsOneWidget);
-
-      await tester.view.resetPhysicalSize();
     });
 
     testWidgets('三人麻雀では座席を3つだけ表示する', (tester) async {
@@ -203,7 +206,6 @@ void main() {
 
       expect(selectedWind, '東');
     });
-
 
     testWidgets('起家・場決めボタンで座席をランダム化する処理を呼び出す', (tester) async {
       var called = false;
