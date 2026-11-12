@@ -24,6 +24,7 @@ class TableLobbyPage extends StatelessWidget {
     this.randomizeSeats,
     this.chooseDealer,
     this.currentUserUid,
+    this.repository,
     super.key,
   });
 
@@ -40,6 +41,9 @@ class TableLobbyPage extends StatelessWidget {
   final Future<void> Function()? randomizeSeats;
   final Future<void> Function()? chooseDealer;
   final String? currentUserUid;
+  final TableRepository? repository;
+
+  TableRepository get _repository => repository ?? _repository;
 
   static const _winds = ['東', '南', '西', '北'];
 
@@ -688,6 +692,7 @@ class _GameStatusRedirect extends StatefulWidget {
     required this.startingPoints,
     required this.tableId,
     required this.currentUserUid,
+    required this.repository,
     required this.child,
   });
 
@@ -697,6 +702,7 @@ class _GameStatusRedirect extends StatefulWidget {
   final int startingPoints;
   final String tableId;
   final String? currentUserUid;
+  final TableRepository? repository;
   final Widget child;
 
   @override
@@ -733,6 +739,7 @@ class _GameStatusRedirectState extends State<_GameStatusRedirect> {
             startingPoints: widget.startingPoints,
             tableId: widget.tableId,
             currentUserUid: widget.currentUserUid,
+            repository: widget.repository,
           ),
         ),
       );
