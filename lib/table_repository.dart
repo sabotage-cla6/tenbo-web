@@ -131,7 +131,7 @@ abstract interface class TableStore {
   Stream<Map<String, String?>> watchSeats(String tableId);
   Stream<String> watchStatus(String tableId);
   Stream<GameState> watchGameState(String tableId);
-  Future<void> declareRiichi(String tableId, String uid);
+  Future<void> toggleRiichi(String tableId, String uid);
   Future<void> startGame(String tableId, String uid);
   Future<void> assignSeat(String tableId, String wind, String uid);
   Future<void> randomizeSeats(String tableId, int playerCount, String uid);
@@ -255,7 +255,7 @@ class FirestoreTableStore implements TableStore {
     });
   }
   @override
-  Future<void> declareRiichi(String tableId, String uid) async {
+  Future<void> toggleRiichi(String tableId, String uid) async {
     final tableRef = _firestore.collection('tables').doc(tableId);
     final memberRef = tableRef.collection('members').doc(uid);
     await _firestore.runTransaction((transaction) async {
@@ -275,14 +275,22 @@ class FirestoreTableStore implements TableStore {
       if (rawPlayers is! Map || rawPlayers[uid] is! Map) throw StateError('プレイヤー情報を取得できません。');
       final players = Map<String, dynamic>.from(rawPlayers);
       final player = Map<String, dynamic>.from(players[uid] as Map);
-      if (player['isRiichi'] == true) throw StateError('既にリーチしています。');
       final score = (player['score'] as num?)?.toInt() ?? 0;
-      if (score < 1000) throw StateError('リーチには1,000点以上必要です。');
-      player['score'] = score - 1000;
-      player['isRiichi'] = true;
+      final kyotaku = (game['kyotakuSticks'] as num?)?.toInt() ?? 0;
+
+      if (player['isRiichi'] == true) {
+        player['score'] = score + 1000;
+        player['isRiichi'] = false;
+        game['kyotakuSticks'] = kyotaku > 0 ? kyotaku - 1 : 0;
+      } else {
+        if (score < 1000) throw StateError('リーチには1,000点以上必要です。');
+        player['score'] = score - 1000;
+        player['isRiichi'] = true;
+        game['kyotakuSticks'] = kyotaku + 1;
+      }
+
       players[uid] = player;
       game['players'] = players;
-      game['kyotakuSticks'] = ((game['kyotakuSticks'] as num?)?.toInt() ?? 0) + 1;
       transaction.update(tableRef, {'game': game, 'updatedAt': FieldValue.serverTimestamp()});
     });
   }
@@ -601,10 +609,10 @@ class TableRepository {
     if (_auth.currentUser == null) return Stream.error(StateError('対局情報を取得するにはログインが必要です。'));
     return _store.watchGameState(tableId);
   }
-  Future<void> declareRiichi(String tableId) async {
+  Future<void> toggleRiichi(String tableId) async {
     final uid = currentUserUid;
     if (uid == null) throw StateError('リーチするにはログインが必要です。');
-    await _store.declareRiichi(tableId, uid);
+    await _store.toggleRiichi(tableId, uid);
   }
 
   Future<void> startGame(String tableId) async {
