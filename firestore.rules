@@ -18,7 +18,8 @@ service cloud.firestore {
       allow get: if signedIn()
         && (resource == null
           || resource.data.ownerUid == request.auth.uid
-          || resource.data.status == 'waiting');
+          || resource.data.status == 'waiting'
+          || exists(/databases/$(database)/documents/tables/$(tableId)/members/$(request.auth.uid)));
 
       // 卓の設定変更・削除はオーナーのみ。
       // 参加者登録に伴う memberCount / updatedAt の更新だけは、
@@ -80,6 +81,45 @@ service cloud.firestore {
                 != request.resource.data.seats.get('north', null))
             && (resource.data.playerCount != 3
               || request.resource.data.seats.get('north', null) == null)
+          )
+          || (
+            // 対局開始は、着席済みの参加者が全席充足を確認して状態だけを変更する場合に許可。
+            resource.data.status == 'waiting'
+            && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['status', 'updatedAt'])
+            && request.resource.data.status == 'playing'
+            && exists(/databases/$(database)/documents/tables/$(tableId)/members/$(request.auth.uid))
+            && (
+              request.resource.data.seats.get('east', null) == request.auth.uid
+              || request.resource.data.seats.get('south', null) == request.auth.uid
+              || request.resource.data.seats.get('west', null) == request.auth.uid
+              || request.resource.data.seats.get('north', null) == request.auth.uid
+            )
+            && (
+              (
+                resource.data.playerCount == 3
+                && request.resource.data.seats.get('east', null) != null
+                && request.resource.data.seats.get('south', null) != null
+                && request.resource.data.seats.get('west', null) != null
+                && request.resource.data.seats.get('north', null) == null
+                && request.resource.data.seats.east != request.resource.data.seats.south
+                && request.resource.data.seats.east != request.resource.data.seats.west
+                && request.resource.data.seats.south != request.resource.data.seats.west
+              )
+              || (
+                resource.data.playerCount != 3
+                && request.resource.data.seats.get('east', null) != null
+                && request.resource.data.seats.get('south', null) != null
+                && request.resource.data.seats.get('west', null) != null
+                && request.resource.data.seats.get('north', null) != null
+                && request.resource.data.seats.east != request.resource.data.seats.south
+                && request.resource.data.seats.east != request.resource.data.seats.west
+                && request.resource.data.seats.east != request.resource.data.seats.north
+                && request.resource.data.seats.south != request.resource.data.seats.west
+                && request.resource.data.seats.south != request.resource.data.seats.north
+                && request.resource.data.seats.west != request.resource.data.seats.north
+              )
+            )
           )
         );
       allow delete: if signedIn()
