@@ -40,8 +40,8 @@ class MockTableRepository extends Mock implements TableRepository {
       ) as Stream<GameState>;
 
   @override
-  Future<void> declareRiichi(String? tableId) => super.noSuchMethod(
-        Invocation.method(#declareRiichi, [tableId]),
+  Future<void> toggleRiichi(String? tableId) => super.noSuchMethod(
+        Invocation.method(#toggleRiichi, [tableId]),
         returnValue: Future<void>.value(),
       ) as Future<void>;
 
