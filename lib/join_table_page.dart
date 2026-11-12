@@ -15,6 +15,7 @@ class JoinTablePage extends StatefulWidget {
     this.membersStream,
     this.seatsStream,
     this.currentUserUid,
+    this.repository,
     super.key,
   });
 
@@ -24,6 +25,7 @@ class JoinTablePage extends StatefulWidget {
   final Stream<List<TableMember>>? membersStream;
   final Stream<Map<String, String?>>? seatsStream;
   final String? currentUserUid;
+  final TableRepository? repository;
 
   @override
   State<JoinTablePage> createState() => _JoinTablePageState();
@@ -32,6 +34,8 @@ class JoinTablePage extends StatefulWidget {
 class _JoinTablePageState extends State<JoinTablePage> {
   final _tableId = TextEditingController();
   bool _joining = false;
+
+  TableRepository get _repository => widget.repository ?? TableRepository();
 
   @override
   void dispose() {
@@ -57,7 +61,7 @@ class _JoinTablePageState extends State<JoinTablePage> {
     setState(() => _joining = true);
     try {
       final findTable = widget.findTableById ??
-          TableRepository().findWaitingTableById;
+          _repository.findWaitingTableById;
       final table = await findTable(tableId);
       if (!mounted) return;
 
@@ -67,7 +71,7 @@ class _JoinTablePageState extends State<JoinTablePage> {
       }
 
       final registerMember =
-          widget.registerMember ?? TableRepository().joinWaitingTable;
+          widget.registerMember ?? _repository.joinWaitingTable;
       await registerMember(table.id);
       if (!mounted) return;
 
@@ -82,6 +86,7 @@ class _JoinTablePageState extends State<JoinTablePage> {
             membersStream: widget.membersStream,
             seatsStream: widget.seatsStream,
             currentUserUid: widget.currentUserUid,
+            repository: widget.repository,
           ),
         ),
       );
