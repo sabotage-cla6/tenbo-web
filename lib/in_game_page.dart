@@ -40,30 +40,18 @@ class InGamePage extends StatelessWidget {
   TableRepository get _repository => repository ??
       (throw StateError('対局画面にはTableRepositoryの指定が必要です。'));
 
-  Future<void> _confirmRiichi(BuildContext context) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('リーチしますか？'),
-        content: const Text('持ち点から1,000点を供託し、リーチ状態にします。'),
-        actions: [
-          TextButton(onPressed: () => Navigator.of(dialogContext).pop(false), child: const Text('キャンセル')),
-          FilledButton(onPressed: () => Navigator.of(dialogContext).pop(true), child: const Text('リーチする')),
-        ],
-      ),
-    );
-    if (confirmed != true) return;
+  Future<void> _toggleRiichi(BuildContext context) async {
     try {
       if (onRiichi != null) {
         await onRiichi!();
       } else if (tableId != null) {
-        await _repository.declareRiichi(tableId!);
+        await _repository.toggleRiichi(tableId!);
       } else {
         throw StateError('卓情報を取得できません。');
       }
     } catch (error) {
       if (!context.mounted) return;
-      final message = error is StateError ? error.message.toString() : 'リーチに失敗しました。';
+      final message = error is StateError ? error.message.toString() : 'リーチ状態の変更に失敗しました。';
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
     }
   }
@@ -212,8 +200,8 @@ class InGamePage extends StatelessWidget {
                     const SizedBox(height: 14),
                     _ActionDock(
                       onAction: (action) => _showAction(context, action),
-                      onRiichi: selfPlayer != null && !selfPlayer.isRiichi && selfPlayer.score >= 1000
-                          ? () => _confirmRiichi(context) : null,
+                      onRiichi: selfPlayer != null && (selfPlayer.isRiichi || selfPlayer.score >= 1000)
+                          ? () => _toggleRiichi(context) : null,
                     ),
                     const SizedBox(height: 10),
                     Text(
