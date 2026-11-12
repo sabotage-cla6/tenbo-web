@@ -420,9 +420,10 @@ class _RoundPanel extends StatelessWidget {
 }
 
 class _ActionDock extends StatelessWidget {
-  const _ActionDock({required this.onAction, this.onRiichi});
+  const _ActionDock({required this.onAction, this.riichiActive = false, this.onRiichi});
 
   final ValueChanged<String> onAction;
+  final bool riichiActive;
   final VoidCallback? onRiichi;
 
   @override
@@ -458,7 +459,11 @@ class _ActionDock extends StatelessWidget {
                     Icon(action.icon, color: Colors.white, size: 21),
                     const SizedBox(height: 3),
                     Text(action.title, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
-                    Text(action.subtitle, textAlign: TextAlign.center,
+                    Text(
+                        action.title == 'リーチ' && riichiActive
+                            ? 'もう一度押して解除'
+                            : action.subtitle,
+                        textAlign: TextAlign.center,
                         style: const TextStyle(color: Colors.white70, fontSize: 9)),
                   ],
                 ),
