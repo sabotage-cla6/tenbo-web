@@ -334,6 +334,7 @@ void main() {
                           playerCount: 4,
                           ownerName: 'テストプレイヤー',
                           currentUserUid: 'owner-1',
+                          statusStream: Stream<String>.value('waiting'),
                           seatsStream: Stream.value(const {'東': null, '南': null, '西': null, '北': null}).asBroadcastStream(),
                           membersStream: Stream.value(const [
                             TableMember(
