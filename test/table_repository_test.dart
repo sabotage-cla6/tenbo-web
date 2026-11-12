@@ -99,9 +99,17 @@ void main() {
     );
     when(store.addTable(
       any,
-      ownerUid: 'user-123',
-      ownerName: 'テストユーザー',
+      ownerUid: anyNamed('ownerUid'),
+      ownerName: anyNamed('ownerName'),
     )).thenAnswer((_) async => 'table-123');
+    when(store.joinWaitingTable(
+      any,
+      uid: anyNamed('uid'),
+      displayName: anyNamed('displayName'),
+    )).thenAnswer((_) async {});
+    when(store.assignSeat(any, any, any)).thenAnswer((_) async {});
+    when(store.randomizeSeats(any, any, any)).thenAnswer((_) async {});
+    when(store.chooseDealer(any, any, any)).thenAnswer((_) async {});
   });
 
   group('TableRepository.createTable', () {
