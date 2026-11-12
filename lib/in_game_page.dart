@@ -35,13 +35,6 @@ class InGamePage extends StatelessWidget {
   final Stream<GameState>? gameStateStream;
   final Future<void> Function()? onRiichi;
 
-  GamePlayer? _playerAt(String wind) {
-    for (final player in players) {
-      if (player.wind == wind) return player;
-    }
-    return null;
-  }
-
   Future<void> _confirmRiichi(BuildContext context) async {
     final confirmed = await showDialog<bool>(
       context: context,

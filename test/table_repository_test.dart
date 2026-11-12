@@ -103,6 +103,26 @@ class MockTableStore extends Mock implements TableStore {
 }
 
 void main() {
+  group('GameState.fromMap', () {
+    test('局・本場・seq・供託・プレイヤー状態を読み込む', () {
+      final state = GameState.fromMap({
+        'round': {'wind': 'south', 'number': 2, 'honba': 1, 'seq': 3},
+        'kyotakuSticks': 2,
+        'players': {
+          'user-123': {'score': 24000, 'isRiichi': true},
+        },
+      });
+
+      expect(state.round.wind, 'south');
+      expect(state.round.number, 2);
+      expect(state.round.honba, 1);
+      expect(state.round.seq, 3);
+      expect(state.kyotakuSticks, 2);
+      expect(state.players['user-123']?.score, 24000);
+      expect(state.players['user-123']?.isRiichi, isTrue);
+    });
+  });
+
   late MockTableAuth auth;
   late MockTableStore store;
   late TableRepository repository;
