@@ -43,7 +43,7 @@ class TableLobbyPage extends StatelessWidget {
   final String? currentUserUid;
   final TableRepository? repository;
 
-  TableRepository get _repository => repository ?? _repository;
+  TableRepository get _repository => repository ?? TableRepository();
 
   static const _winds = ['東', '南', '西', '北'];
 
@@ -101,7 +101,7 @@ class TableLobbyPage extends StatelessWidget {
     Map<String, String?> seats,
     int playerCount,
   ) {
-    final uid = currentUserUid ?? TableRepository().currentUserUid;
+    final uid = currentUserUid ?? _repository.currentUserUid;
     final canChoose = uid != null && seats.values.contains(uid);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -114,7 +114,7 @@ class TableLobbyPage extends StatelessWidget {
                     ? () => _runSeatAction(
                           context,
                           randomizeSeats ??
-                              () => TableRepository().randomizeSeats(
+                              () => _repository.randomizeSeats(
                                     tableId,
                                     playerCount,
                                   ),
@@ -136,7 +136,7 @@ class TableLobbyPage extends StatelessWidget {
                     ? () => _runSeatAction(
                           context,
                           chooseDealer ??
-                              () => TableRepository().chooseDealer(
+                              () => _repository.chooseDealer(
                                     tableId,
                                     playerCount,
                                   ),
@@ -338,7 +338,7 @@ class TableLobbyPage extends StatelessWidget {
                     ),
                     const SizedBox(height: 14),
                     StreamBuilder<List<TableMember>>(
-                      stream: membersStream ?? TableRepository().watchMembers(tableId),
+                      stream: membersStream ?? _repository.watchMembers(tableId),
                       initialData: [
                         TableMember(uid: 'owner', displayName: ownerName, isOwner: true),
                       ],
@@ -396,7 +396,7 @@ class TableLobbyPage extends StatelessWidget {
                                   style: TextStyle(color: _ink, fontWeight: FontWeight.bold)),
                               const SizedBox(height: 8),
                               StreamBuilder<Map<String, String?>>(
-                                stream: seatsStream ?? TableRepository().watchSeats(tableId),
+                                stream: seatsStream ?? _repository.watchSeats(tableId),
                                 initialData: const {'東': null, '南': null, '西': null, '北': null},
                                 builder: (context, seatSnapshot) {
                                   final seats = seatSnapshot.data ?? const <String, String?>{};
@@ -411,11 +411,11 @@ class TableLobbyPage extends StatelessWidget {
                                             wind: wind,
                                             playerName: memberByUid[seats[wind]]?.displayName,
                                             isOwner: memberByUid[seats[wind]]?.isOwner ?? false,
-                                            isMine: seats[wind] == (currentUserUid ?? TableRepository().currentUserUid),
+                                            isMine: seats[wind] == (currentUserUid ?? _repository.currentUserUid),
                                             onTap: () async {
                                               try {
                                                 final assign = assignSeat ??
-                                                    (seat) => TableRepository().assignSeat(tableId, seat);
+                                                    (seat) => _repository.assignSeat(tableId, seat);
                                                 await assign(wind);
                                               } catch (error) {
                                                 if (!context.mounted) return;
@@ -456,7 +456,7 @@ class TableLobbyPage extends StatelessWidget {
                                           ];
                                           return StreamBuilder<String>(
                                             stream: statusStream ??
-                                                TableRepository().watchStatus(tableId),
+                                                _repository.watchStatus(tableId),
                                             initialData: 'waiting',
                                             builder: (context, statusSnapshot) {
                                               final isWaiting =
@@ -467,13 +467,13 @@ class TableLobbyPage extends StatelessWidget {
                                                 players: gamePlayers,
                                                 startingPoints: startingPoints,
                                                 tableId: tableId,
-                                                currentUserUid: currentUserUid ?? TableRepository().currentUserUid,
+                                                currentUserUid: currentUserUid ?? _repository.currentUserUid,
                                                 child: FilledButton.icon(
                                                   onPressed: allSeatsFilled && isWaiting
                                                       ? () => _runSeatAction(
                                                             context,
                                                             startGame ??
-                                                                () => TableRepository().startGame(tableId),
+                                                                () => _repository.startGame(tableId),
                                                             failureMessage: '対局の開始に失敗しました。',
                                                           )
                                                       : null,
