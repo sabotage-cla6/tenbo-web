@@ -2,8 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mockito/mockito.dart';
 import 'package:tenbo_web/table_lobby_page.dart';
 import 'package:tenbo_web/table_repository.dart';
+import 'helpers/mock_table_repository.dart';
 
 Widget buildLobby({
   int playerCount = 4,
@@ -15,6 +17,7 @@ Widget buildLobby({
   Future<void> Function()? randomizeSeats,
   Future<void> Function()? chooseDealer,
   String currentUserUid = 'owner-1',
+  TableRepository? repository,
 }) {
   return MaterialApp(
     home: TableLobbyPage(
@@ -40,6 +43,7 @@ Widget buildLobby({
       statusStream: statusStream ?? Stream<String>.value('waiting'),
       startGame: startGame,
       currentUserUid: currentUserUid,
+      repository: repository,
       assignSeat: assignSeat,
       randomizeSeats: randomizeSeats,
       chooseDealer: chooseDealer,
@@ -132,6 +136,14 @@ void main() {
       });
       final statusController = StreamController<String>.broadcast();
       addTearDown(statusController.close);
+      final repository = MockTableRepository();
+      when(repository.watchGameState('table-123')).thenAnswer((_) => Stream.value(
+        const GameState(
+          round: GameRound(wind: 'east', number: 1, honba: 0, seq: 1),
+          kyotakuSticks: 0,
+          players: {},
+        ),
+      ));
 
       await tester.pumpWidget(
         buildLobby(
@@ -148,6 +160,7 @@ void main() {
             '北': 'guest-4',
           }),
           statusStream: statusController.stream,
+          repository: repository,
         ),
       );
       await tester.pump();
@@ -159,6 +172,7 @@ void main() {
       expect(find.text('対局中'), findsOneWidget);
       expect(find.text('プレイヤーA'), findsOneWidget);
       expect(find.text('プレイヤーD'), findsOneWidget);
+      verify(repository.watchGameState('table-123')).called(1);
     });
 
     testWidgets('対局開始ボタンで共有状態の更新処理を呼び出す', (tester) async {
