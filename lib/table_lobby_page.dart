@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'game_page.dart';
+import 'in_game_page.dart';
 import 'table_repository.dart';
 
 const _ink = Color(0xFF18352E);
@@ -437,15 +437,26 @@ class TableLobbyPage extends StatelessWidget {
                                                 ? () {
                                                     Navigator.of(context).push(
                                                       MaterialPageRoute<void>(
-                                                        builder: (_) => GamePage(
-                                                          tableName: tableName,
-                                                          playerCount: safePlayerCount,
-                                                          players: seatedPlayers,
-                                                          startingPoints:
+                                                        builder: (_) {
+                                                          final startingPoints =
                                                               (settings['startingPoints'] as num?)
                                                                       ?.toInt() ??
-                                                                  25000,
-                                                        ),
+                                                                  25000;
+                                                          final gamePlayers = [
+                                                            for (final wind in _winds.take(safePlayerCount))
+                                                              GamePlayer(
+                                                                wind: wind,
+                                                                name: seatedPlayers[wind]!,
+                                                                score: startingPoints,
+                                                                isDealer: wind == '東',
+                                                              ),
+                                                          ];
+                                                          return InGamePage(
+                                                            tableName: tableName,
+                                                            players: gamePlayers,
+                                                            startingPoints: startingPoints,
+                                                          );
+                                                        },
                                                       ),
                                                     );
                                                   }
