@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tenbo_web/table_lobby_page.dart';
@@ -7,6 +9,8 @@ Widget buildLobby({
   int playerCount = 4,
   Stream<List<TableMember>>? membersStream,
   Stream<Map<String, String?>>? seatsStream,
+  Stream<String>? statusStream,
+  Future<void> Function()? startGame,
   Future<void> Function(String wind)? assignSeat,
   Future<void> Function()? randomizeSeats,
   Future<void> Function()? chooseDealer,
@@ -33,6 +37,8 @@ Widget buildLobby({
         '西': null,
         '北': null,
       })).asBroadcastStream(),
+      statusStream: statusStream ?? Stream<String>.value('waiting'),
+      startGame: startGame,
       currentUserUid: currentUserUid,
       assignSeat: assignSeat,
       randomizeSeats: randomizeSeats,
@@ -116,7 +122,7 @@ void main() {
       }
     });
 
-    testWidgets('全員が着席すると対局中画面へ遷移する', (tester) async {
+    testWidgets('Firestoreの卓状態が対局中になると画面遷移する', (tester) async {
       // 対局開始ボタンが画面内に収まるサイズでテストする。
       tester.view.physicalSize = const Size(900, 1200);
       tester.view.devicePixelRatio = 1;
@@ -124,6 +130,8 @@ void main() {
         tester.view.resetPhysicalSize();
         tester.view.resetDevicePixelRatio();
       });
+      final statusController = StreamController<String>.broadcast();
+      addTearDown(statusController.close);
 
       await tester.pumpWidget(
         buildLobby(
@@ -139,6 +147,37 @@ void main() {
             '西': 'guest-3',
             '北': 'guest-4',
           }),
+          statusStream: statusController.stream,
+        ),
+      );
+      await tester.pump();
+
+      statusController.add('playing');
+      await tester.pump();
+      await tester.pumpAndSettle();
+
+      expect(find.text('対局中'), findsOneWidget);
+      expect(find.text('プレイヤーA'), findsOneWidget);
+      expect(find.text('プレイヤーD'), findsOneWidget);
+    });
+
+    testWidgets('対局開始ボタンで共有状態の更新処理を呼び出す', (tester) async {
+      var called = false;
+      await tester.pumpWidget(
+        buildLobby(
+          membersStream: Stream.value(const [
+            TableMember(uid: 'owner-1', displayName: 'プレイヤーA', isOwner: true),
+            TableMember(uid: 'guest-2', displayName: 'プレイヤーB', isOwner: false),
+            TableMember(uid: 'guest-3', displayName: 'プレイヤーC', isOwner: false),
+            TableMember(uid: 'guest-4', displayName: 'プレイヤーD', isOwner: false),
+          ]),
+          seatsStream: Stream.value(const {
+            '東': 'owner-1',
+            '南': 'guest-2',
+            '西': 'guest-3',
+            '北': 'guest-4',
+          }),
+          startGame: () async { called = true; },
         ),
       );
       await tester.pump();
@@ -146,11 +185,9 @@ void main() {
       final startButton = find.widgetWithText(FilledButton, '対局を開始する');
       await tester.ensureVisible(startButton);
       await tester.tap(startButton);
-      await tester.pumpAndSettle();
+      await tester.pump();
 
-      expect(find.text('対局中'), findsOneWidget);
-      expect(find.text('プレイヤーA'), findsOneWidget);
-      expect(find.text('プレイヤーD'), findsOneWidget);
+      expect(called, isTrue);
     });
 
     testWidgets('三人麻雀では座席を3つだけ表示する', (tester) async {
