@@ -86,6 +86,8 @@ abstract interface class TableStore {
   });
   Stream<List<TableMember>> watchMembers(String tableId);
   Stream<Map<String, String?>> watchSeats(String tableId);
+  Stream<String> watchStatus(String tableId);
+  Future<void> startGame(String tableId, String uid);
   Future<void> assignSeat(String tableId, String wind, String uid);
   Future<void> randomizeSeats(String tableId, int playerCount, String uid);
   Future<void> chooseDealer(String tableId, int playerCount, String uid);
@@ -189,6 +191,54 @@ class FirestoreTableStore implements TableStore {
         '西': seats['west'] as String?,
         '北': seats['north'] as String?,
       };
+    });
+  }
+
+  @override
+  Stream<String> watchStatus(String tableId) {
+    return _firestore.collection('tables').doc(tableId).snapshots().map(
+      (snapshot) => snapshot.data()?['status'] as String? ?? 'waiting',
+    );
+  }
+
+  @override
+  Future<void> startGame(String tableId, String uid) async {
+    final tableRef = _firestore.collection('tables').doc(tableId);
+    final memberRef = tableRef.collection('members').doc(uid);
+
+    await _firestore.runTransaction((transaction) async {
+      final tableSnapshot = await transaction.get(tableRef);
+      final memberSnapshot = await transaction.get(memberRef);
+      if (!tableSnapshot.exists || tableSnapshot.data()?['status'] != 'waiting') {
+        throw StateError('対局を開始できるロビーが見つかりません。');
+      }
+      if (!memberSnapshot.exists) {
+        throw StateError('卓の参加者だけが対局を開始できます。');
+      }
+
+      final data = tableSnapshot.data()!;
+      final playerCount = (data['playerCount'] as num?)?.toInt() ?? 4;
+      final rawSeats = data['seats'];
+      final seatFields = playerCount == 3
+          ? const ['east', 'south', 'west']
+          : const ['east', 'south', 'west', 'north'];
+      final seatedUids = [
+        for (final field in seatFields)
+          if (rawSeats is Map && rawSeats[field] is String)
+            rawSeats[field] as String,
+      ];
+      if (seatedUids.length != playerCount ||
+          seatedUids.toSet().length != playerCount) {
+        throw StateError('全員が着席してから対局を開始してください。');
+      }
+      if (!seatedUids.contains(uid)) {
+        throw StateError('対局者だけが対局を開始できます。');
+      }
+
+      transaction.update(tableRef, {
+        'status': 'playing',
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
     });
   }
 
@@ -446,6 +496,19 @@ class TableRepository {
       return Stream.error(StateError('ロビーを表示するにはログインが必要です。'));
     }
     return _store.watchSeats(tableId);
+  }
+
+  Stream<String> watchStatus(String tableId) {
+    if (_auth.currentUser == null) {
+      return Stream.error(StateError('卓の状態を取得するにはログインが必要です。'));
+    }
+    return _store.watchStatus(tableId);
+  }
+
+  Future<void> startGame(String tableId) async {
+    final uid = currentUserUid;
+    if (uid == null) throw StateError('対局を開始するにはログインが必要です。');
+    await _store.startGame(tableId, uid);
   }
 
   Future<void> assignSeat(String tableId, String wind) async {
