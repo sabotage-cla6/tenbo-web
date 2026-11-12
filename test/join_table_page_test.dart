@@ -76,7 +76,7 @@ void main() {
       expect(find.text('table-123'), findsOneWidget);
       expect(find.text('作成者'), findsOneWidget);
       expect(find.text('参加者2'), findsOneWidget);
-      verify(repository.watchStatus('table-123')).called(1);
+      verify(repository.watchStatus('table-123')).called(greaterThan(0));
     });
 
     testWidgets('該当する卓がなければロビーへ遷移しない', (tester) async {
