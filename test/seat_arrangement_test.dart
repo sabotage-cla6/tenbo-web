@@ -82,7 +82,7 @@ void main() {
         result['west'],
         result['north'],
       ];
-      final dealerIndex = originalOrder.indexOf(result['east']);
+      final dealerIndex = originalOrder.indexOf(result['east']!);
       expect(resultOrder, [
         for (var offset = 0; offset < 4; offset++)
           originalOrder[(dealerIndex + offset) % 4],
