@@ -200,6 +200,7 @@ class InGamePage extends StatelessWidget {
                     const SizedBox(height: 14),
                     _ActionDock(
                       onAction: (action) => _showAction(context, action),
+                      riichiActive: selfPlayer?.isRiichi ?? false,
                       onRiichi: selfPlayer != null && (selfPlayer.isRiichi || selfPlayer.score >= 1000)
                           ? () => _toggleRiichi(context) : null,
                     ),
