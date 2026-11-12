@@ -124,13 +124,13 @@ class InGamePage extends StatelessWidget {
                                     crossAxisSpacing: 7,
                                     children: [
                                       const SizedBox.shrink(),
-                                      _PlayerPanel(player: _playerAt('北')),
+                                      _PlayerPanel(player: _playerAt('北'), startingPoints: startingPoints),
                                       const SizedBox.shrink(),
-                                      _PlayerPanel(player: _playerAt('東')),
+                                      _PlayerPanel(player: _playerAt('東'), startingPoints: startingPoints),
                                       _RoundPanel(round: round, honba: honba, kyotaku: kyotaku),
-                                      _PlayerPanel(player: _playerAt('西')),
+                                      _PlayerPanel(player: _playerAt('西'), startingPoints: startingPoints),
                                       const SizedBox.shrink(),
-                                      _PlayerPanel(player: _playerAt('南'), isSelf: true),
+                                      _PlayerPanel(player: _playerAt('南'), isSelf: true, startingPoints: startingPoints),
                                       const SizedBox.shrink(),
                                     ],
                                   ),
@@ -222,9 +222,10 @@ class _GameInfoBar extends StatelessWidget {
 }
 
 class _PlayerPanel extends StatelessWidget {
-  const _PlayerPanel({required this.player, this.isSelf = false});
+  const _PlayerPanel({required this.player, required this.startingPoints, this.isSelf = false});
 
   final GamePlayer? player;
+  final int startingPoints;
   final bool isSelf;
 
   String _format(int value) =>
@@ -233,7 +234,7 @@ class _PlayerPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (player == null) return const SizedBox.shrink();
-    final diff = player!.score - 25000;
+    final diff = player!.score - startingPoints;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 5),
       decoration: BoxDecoration(
