@@ -457,7 +457,7 @@ class TableLobbyPage extends StatelessWidget {
                                               final isWaiting =
                                                   (statusSnapshot.data ?? 'waiting') == 'waiting';
                                               return _GameStatusRedirect(
-                                                isPlaying: !isWaiting,
+                                                isPlaying: statusSnapshot.data == 'playing',
                                                 tableName: tableName,
                                                 players: gamePlayers,
                                                 startingPoints: startingPoints,
