@@ -65,7 +65,7 @@ void main() {
     });
 
 
-    testWidgets('リーチ後のFirestore状態を画面に反映する', (tester) async {
+    testWidgets('確認ダイアログなしでリーチし、もう一度押すと解除を依頼する', (tester) async {
       final controller = StreamController<GameState>();
       var riichiCalled = false;
       const statePlayers = [
@@ -95,9 +95,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(riichiButton);
       await tester.pumpAndSettle();
-      expect(find.text('リーチしますか？'), findsOneWidget);
-      await tester.tap(find.text('リーチする'));
-      await tester.pump();
+      expect(find.text('リーチしますか？'), findsNothing);
       expect(riichiCalled, isTrue);
       controller.add(const GameState(
         round: GameRound(wind: 'east', number: 1, honba: 0, seq: 1),
@@ -113,6 +111,9 @@ void main() {
       expect(find.text('24,000'), findsOneWidget);
       expect(find.text('1,000点'), findsOneWidget);
       expect(find.text('⚡ 立直'), findsOneWidget);
+      await tester.tap(riichiButton);
+      await tester.pump();
+      expect(riichiCalled, isTrue);
       await controller.close();
     });
 
@@ -178,10 +179,9 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('リーチ'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('リーチする'));
       await tester.pumpAndSettle();
 
-      verify(repository.declareRiichi('table-123')).called(1);
+      verify(repository.toggleRiichi('table-123')).called(1);
     });
 
     testWidgets('操作ボタンは未実装であることを案内する', (tester) async {
