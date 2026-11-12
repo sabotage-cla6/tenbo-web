@@ -86,7 +86,7 @@ class _JoinTablePageState extends State<JoinTablePage> {
             membersStream: widget.membersStream,
             seatsStream: widget.seatsStream,
             currentUserUid: widget.currentUserUid,
-            repository: widget.repository,
+            repository: _repository,
           ),
         ),
       );
