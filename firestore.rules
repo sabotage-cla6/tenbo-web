@@ -26,7 +26,10 @@ service cloud.firestore {
       // 同じトランザクションで本人の参加者ドキュメントが新規作成される場合に許可する。
       allow update: if signedIn()
         && (
-          resource.data.ownerUid == request.auth.uid
+          (
+            resource.data.ownerUid == request.auth.uid
+            && request.resource.data.status == resource.data.status
+          )
           || (
             resource.data.status == 'waiting'
             && request.resource.data.diff(resource.data).affectedKeys()
