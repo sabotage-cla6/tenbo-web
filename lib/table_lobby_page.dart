@@ -444,7 +444,7 @@ class TableLobbyPage extends StatelessWidget {
                                             for (final wind in _winds.take(safePlayerCount))
                                               GamePlayer(
                                                 wind: wind,
-                                                name: seatedPlayers[wind]!,
+                                                name: seatedPlayers[wind] ?? '参加者',
                                                 score: startingPoints,
                                                 isDealer: wind == '東',
                                               ),
@@ -457,7 +457,7 @@ class TableLobbyPage extends StatelessWidget {
                                               final isWaiting =
                                                   (statusSnapshot.data ?? 'waiting') == 'waiting';
                                               return _GameStatusRedirect(
-                                                isPlaying: statusSnapshot.data == 'playing',
+                                                isPlaying: statusSnapshot.data == 'playing' && allSeatsFilled,
                                                 tableName: tableName,
                                                 players: gamePlayers,
                                                 startingPoints: startingPoints,
