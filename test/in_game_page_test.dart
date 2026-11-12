@@ -2,8 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mockito/mockito.dart';
 import 'package:tenbo_web/in_game_page.dart';
 import 'package:tenbo_web/table_repository.dart';
+import 'helpers/mock_table_repository.dart';
 
 void main() {
   const players = [
@@ -112,6 +114,38 @@ void main() {
       expect(find.text('1,000点'), findsOneWidget);
       expect(find.text('⚡ 立直'), findsOneWidget);
       await controller.close();
+    });
+
+    testWidgets('Repositoryから取得した対局状態を表示する', (tester) async {
+      final repository = MockTableRepository();
+      when(repository.watchGameState('table-123')).thenAnswer((_) => Stream.value(
+        const GameState(
+          round: GameRound(wind: 'south', number: 2, honba: 1, seq: 2),
+          kyotakuSticks: 2,
+          players: {
+            'south-uid': GamePlayerState(score: 24000, isRiichi: true),
+          },
+        ),
+      ));
+
+      await tester.pumpWidget(MaterialApp(
+        home: InGamePage(
+          tableName: 'テスト卓',
+          players: const [
+            GamePlayer(uid: 'south-uid', wind: '南', name: '自分', score: 25000),
+          ],
+          tableId: 'table-123',
+          currentUserUid: 'south-uid',
+          repository: repository,
+        ),
+      ));
+      await tester.pump();
+
+      expect(find.text('南2局'), findsOneWidget);
+      expect(find.text('24,000'), findsOneWidget);
+      expect(find.text('2,000点'), findsOneWidget);
+      expect(find.text('⚡ 立直'), findsOneWidget);
+      verify(repository.watchGameState('table-123')).called(1);
     });
 
     testWidgets('操作ボタンは未実装であることを案内する', (tester) async {
