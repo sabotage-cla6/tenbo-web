@@ -468,6 +468,7 @@ class TableLobbyPage extends StatelessWidget {
                                                 startingPoints: startingPoints,
                                                 tableId: tableId,
                                                 currentUserUid: currentUserUid ?? _repository.currentUserUid,
+                                                repository: _repository,
                                                 child: FilledButton.icon(
                                                   onPressed: allSeatsFilled && isWaiting
                                                       ? () => _runSeatAction(
