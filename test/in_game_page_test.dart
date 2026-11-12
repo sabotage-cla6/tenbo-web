@@ -25,7 +25,8 @@ void main() {
       await tester.pumpWidget(buildPage());
 
       expect(find.text('金曜夜セット麻雀'), findsOneWidget);
-      expect(find.text('東1局'), findsNWidgets(2));
+      expect(find.text('東1局'), findsOneWidget);
+      expect(find.text('東1局  •  配点 25,000点'), findsOneWidget);
       expect(find.text('0 本場'), findsOneWidget);
       expect(find.text('1,000点'), findsOneWidget);
       expect(find.text('上家'), findsOneWidget);
@@ -61,7 +62,10 @@ void main() {
     testWidgets('操作ボタンは未実装であることを案内する', (tester) async {
       await tester.pumpWidget(buildPage());
 
-      await tester.tap(find.text('和了'));
+      final winButton = find.text('和了');
+      await tester.ensureVisible(winButton);
+      await tester.pumpAndSettle();
+      await tester.tap(winButton);
       await tester.pump();
 
       expect(find.text('和了機能は今後実装します。'), findsOneWidget);
