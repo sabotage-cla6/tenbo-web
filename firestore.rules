@@ -128,7 +128,10 @@ service cloud.firestore {
       match /members/{userId} {
         // 待機中ロビーの参加者一覧はログイン済みユーザーが取得できる。
         allow get, list: if signedIn()
-          && get(/databases/$(database)/documents/tables/$(tableId)).data.status == 'waiting';
+          && (
+            get(/databases/$(database)/documents/tables/$(tableId)).data.status == 'waiting'
+            || exists(/databases/$(database)/documents/tables/$(tableId)/members/$(request.auth.uid))
+          );
 
         // 自分自身の参加情報だけを登録できる。
         // 卓作成時のオーナー情報は親卓と同じ batch で作成するため getAfter を使う。
