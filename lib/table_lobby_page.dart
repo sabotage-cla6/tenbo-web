@@ -18,6 +18,8 @@ class TableLobbyPage extends StatelessWidget {
     required this.ownerName,
     this.membersStream,
     this.seatsStream,
+    this.statusStream,
+    this.startGame,
     this.assignSeat,
     this.randomizeSeats,
     this.chooseDealer,
@@ -32,6 +34,8 @@ class TableLobbyPage extends StatelessWidget {
   final String ownerName;
   final Stream<List<TableMember>>? membersStream;
   final Stream<Map<String, String?>>? seatsStream;
+  final Stream<String>? statusStream;
+  final Future<void> Function()? startGame;
   final Future<void> Function(String wind)? assignSeat;
   final Future<void> Function()? randomizeSeats;
   final Future<void> Function()? chooseDealer;
@@ -432,51 +436,57 @@ class TableLobbyPage extends StatelessWidget {
                                           final allSeatsFilled = seatedPlayers.values.every(
                                             (name) => name != null && name.trim().isNotEmpty,
                                           );
-                                          return FilledButton.icon(
-                                            onPressed: allSeatsFilled
-                                                ? () {
-                                                    Navigator.of(context).push(
-                                                      MaterialPageRoute<void>(
-                                                        builder: (_) {
-                                                          final startingPoints =
-                                                              (settings['startingPoints'] as num?)
-                                                                      ?.toInt() ??
-                                                                  25000;
-                                                          final gamePlayers = [
-                                                            for (final wind in _winds.take(safePlayerCount))
-                                                              GamePlayer(
-                                                                wind: wind,
-                                                                name: seatedPlayers[wind]!,
-                                                                score: startingPoints,
-                                                                isDealer: wind == '東',
-                                                              ),
-                                                          ];
-                                                          return InGamePage(
-                                                            tableName: tableName,
-                                                            players: gamePlayers,
-                                                            startingPoints: startingPoints,
-                                                          );
-                                                        },
-                                                      ),
-                                                    );
-                                                  }
-                                                : null,
-                                            icon: const Icon(Icons.play_arrow),
-                                            label: Text(
-                                              allSeatsFilled
-                                                  ? '対局を開始する'
-                                                  : '参加者が揃うと対局を開始できます',
-                                            ),
-                                            style: FilledButton.styleFrom(
-                                              backgroundColor: _green,
-                                              foregroundColor: Colors.white,
-                                              disabledBackgroundColor:
-                                                  const Color(0xFFB7C3BC),
-                                              disabledForegroundColor: Colors.white,
-                                              padding: const EdgeInsets.symmetric(
-                                                vertical: 16,
+                                          final startingPoints =
+                                              (settings['startingPoints'] as num?)?.toInt() ??
+                                                  25000;
+                                          final gamePlayers = [
+                                            for (final wind in _winds.take(safePlayerCount))
+                                              GamePlayer(
+                                                wind: wind,
+                                                name: seatedPlayers[wind]!,
+                                                score: startingPoints,
+                                                isDealer: wind == '東',
                                               ),
-                                            ),
+                                          ];
+                                          return StreamBuilder<String>(
+                                            stream: statusStream ??
+                                                TableRepository().watchStatus(tableId),
+                                            initialData: 'waiting',
+                                            builder: (context, statusSnapshot) {
+                                              final isWaiting =
+                                                  (statusSnapshot.data ?? 'waiting') == 'waiting';
+                                              return _GameStatusRedirect(
+                                                isPlaying: !isWaiting,
+                                                tableName: tableName,
+                                                players: gamePlayers,
+                                                startingPoints: startingPoints,
+                                                child: FilledButton.icon(
+                                                  onPressed: allSeatsFilled && isWaiting
+                                                      ? () => _runSeatAction(
+                                                            context,
+                                                            startGame ??
+                                                                () => TableRepository().startGame(tableId),
+                                                          )
+                                                      : null,
+                                                  icon: const Icon(Icons.play_arrow),
+                                                  label: Text(
+                                                    allSeatsFilled
+                                                        ? '対局を開始する'
+                                                        : '参加者が揃うと対局を開始できます',
+                                                  ),
+                                                  style: FilledButton.styleFrom(
+                                                    backgroundColor: _green,
+                                                    foregroundColor: Colors.white,
+                                                    disabledBackgroundColor:
+                                                        const Color(0xFFB7C3BC),
+                                                    disabledForegroundColor: Colors.white,
+                                                    padding: const EdgeInsets.symmetric(
+                                                      vertical: 16,
+                                                    ),
+                                                  ),
+                                                ),
+                                              );
+                                            },
                                           );
                                         },
                                       ),
@@ -661,4 +671,63 @@ class _PlayerSeat extends StatelessWidget {
       ),
     );
   }
+}
+
+
+/// Firestore上の卓状態が対局中に変わったら、この端末も対局画面へ遷移する。
+class _GameStatusRedirect extends StatefulWidget {
+  const _GameStatusRedirect({
+    required this.isPlaying,
+    required this.tableName,
+    required this.players,
+    required this.startingPoints,
+    required this.child,
+  });
+
+  final bool isPlaying;
+  final String tableName;
+  final List<GamePlayer> players;
+  final int startingPoints;
+  final Widget child;
+
+  @override
+  State<_GameStatusRedirect> createState() => _GameStatusRedirectState();
+}
+
+class _GameStatusRedirectState extends State<_GameStatusRedirect> {
+  bool _hasNavigated = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _navigateIfNeeded();
+  }
+
+  @override
+  void didUpdateWidget(covariant _GameStatusRedirect oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isPlaying && !oldWidget.isPlaying) {
+      _navigateIfNeeded();
+    }
+  }
+
+  void _navigateIfNeeded() {
+    if (!widget.isPlaying || _hasNavigated) return;
+    _hasNavigated = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute<void>(
+          builder: (_) => InGamePage(
+            tableName: widget.tableName,
+            players: widget.players,
+            startingPoints: widget.startingPoints,
+          ),
+        ),
+      );
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }
