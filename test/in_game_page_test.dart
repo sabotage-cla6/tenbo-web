@@ -67,7 +67,7 @@ void main() {
 
     testWidgets('確認ダイアログなしでリーチし、もう一度押すと解除を依頼する', (tester) async {
       final controller = StreamController<GameState>();
-      var riichiCalled = false;
+      var riichiCallCount = 0;
       const statePlayers = [
         GamePlayer(uid: 'east-uid', wind: '東', name: '東家', score: 25000, isDealer: true),
         GamePlayer(uid: 'south-uid', wind: '南', name: '南家', score: 25000),
@@ -77,7 +77,7 @@ void main() {
       await tester.pumpWidget(MaterialApp(home: InGamePage(
         tableName: 'テスト卓', players: statePlayers, tableId: 'table-123',
         currentUserUid: 'south-uid', gameStateStream: controller.stream,
-        onRiichi: () async { riichiCalled = true; },
+        onRiichi: () async { riichiCallCount++; },
       )));
       controller.add(const GameState(
         round: GameRound(wind: 'east', number: 1, honba: 0, seq: 1),
@@ -96,7 +96,7 @@ void main() {
       await tester.tap(riichiButton);
       await tester.pumpAndSettle();
       expect(find.text('リーチしますか？'), findsNothing);
-      expect(riichiCalled, isTrue);
+      expect(riichiCallCount, 1);
       controller.add(const GameState(
         round: GameRound(wind: 'east', number: 1, honba: 0, seq: 1),
         kyotakuSticks: 1,
@@ -113,7 +113,20 @@ void main() {
       expect(find.text('⚡ 立直'), findsOneWidget);
       await tester.tap(riichiButton);
       await tester.pump();
-      expect(riichiCalled, isTrue);
+      expect(riichiCallCount, 2);
+      controller.add(const GameState(
+        round: GameRound(wind: 'east', number: 1, honba: 0, seq: 1),
+        kyotakuSticks: 0,
+        players: {
+          'east-uid': GamePlayerState(score: 25000, isRiichi: false),
+          'south-uid': GamePlayerState(score: 25000, isRiichi: false),
+          'west-uid': GamePlayerState(score: 25000, isRiichi: false),
+          'north-uid': GamePlayerState(score: 25000, isRiichi: false),
+        },
+      ));
+      await tester.pump();
+      expect(find.text('25,000'), findsOneWidget);
+      expect(find.text('⚡ 立直'), findsNothing);
       await controller.close();
     });
 
