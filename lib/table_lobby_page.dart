@@ -18,6 +18,8 @@ class TableLobbyPage extends StatelessWidget {
     this.membersStream,
     this.seatsStream,
     this.assignSeat,
+    this.randomizeSeats,
+    this.chooseDealer,
     this.currentUserUid,
     super.key,
   });
@@ -30,6 +32,8 @@ class TableLobbyPage extends StatelessWidget {
   final Stream<List<TableMember>>? membersStream;
   final Stream<Map<String, String?>>? seatsStream;
   final Future<void> Function(String wind)? assignSeat;
+  final Future<void> Function()? randomizeSeats;
+  final Future<void> Function()? chooseDealer;
   final String? currentUserUid;
 
   static const _winds = ['東', '南', '西', '北'];
@@ -65,9 +69,90 @@ class TableLobbyPage extends StatelessWidget {
         _ => '未設定',
       };
 
-  void _showComingSoon(BuildContext context, String feature) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$feature機能は今後追加します。')),
+  Future<void> _runSeatAction(
+    BuildContext context,
+    Future<void> Function() action,
+  ) async {
+    try {
+      await action();
+    } catch (error) {
+      if (!context.mounted) return;
+      final message = error is StateError
+          ? error.message.toString()
+          : '座席の更新に失敗しました。';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
+    }
+  }
+
+  Widget _buildDealerButtons(
+    BuildContext context,
+    Map<String, String?> seats,
+    int playerCount,
+  ) {
+    final uid = currentUserUid ?? TableRepository().currentUserUid;
+    final canChoose = uid != null && seats.values.contains(uid);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: canChoose
+                    ? () => _runSeatAction(
+                          context,
+                          randomizeSeats ??
+                              () => TableRepository().randomizeSeats(
+                                    tableId,
+                                    playerCount,
+                                  ),
+                        )
+                    : null,
+                icon: const Icon(Icons.casino_outlined),
+                label: const Text('起家・場決め'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: _green,
+                  side: const BorderSide(color: Color(0xFFB9C9BE)),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: canChoose
+                    ? () => _runSeatAction(
+                          context,
+                          chooseDealer ??
+                              () => TableRepository().chooseDealer(
+                                    tableId,
+                                    playerCount,
+                                  ),
+                        )
+                    : null,
+                icon: const Icon(Icons.sports_esports_outlined),
+                label: const Text('起家決め'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: _green,
+                  side: const BorderSide(color: Color(0xFFB9C9BE)),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+              ),
+            ),
+          ],
+        ),
+        if (!canChoose)
+          const Padding(
+            padding: EdgeInsets.only(top: 8),
+            child: Text(
+              '起家を決めるには、先に対局者の席に入ってください。',
+              style: TextStyle(color: Colors.black54, fontSize: 12),
+              textAlign: TextAlign.center,
+            ),
+          ),
+      ],
     );
   }
 
@@ -334,6 +419,8 @@ class TableLobbyPage extends StatelessWidget {
                                             },
                                           ),
                                         ),
+                                      const SizedBox(height: 14),
+                                      _buildDealerButtons(context, seats, safePlayerCount),
                                     ],
                                   );
                                 },
@@ -365,36 +452,6 @@ class TableLobbyPage extends StatelessWidget {
                       },
                     ),
                     const SizedBox(height: 14),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            onPressed: () =>
-                                _showComingSoon(context, '起家・場決め'),
-                            icon: const Icon(Icons.casino_outlined),
-                            label: const Text('起家・場決め'),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: _green,
-                              side: const BorderSide(color: Color(0xFFB9C9BE)),
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            onPressed: () => _showComingSoon(context, '起家決め'),
-                            icon: const Icon(Icons.sports_esports_outlined),
-                            label: const Text('起家決め'),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: _green,
-                              side: const BorderSide(color: Color(0xFFB9C9BE)),
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
                     const SizedBox(height: 22),
                     FilledButton.icon(
                       onPressed: null,
