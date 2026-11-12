@@ -98,6 +98,10 @@ service cloud.firestore {
               || request.resource.data.seats.get('west', null) == request.auth.uid
               || request.resource.data.seats.get('north', null) == request.auth.uid
             )
+            && isMember(tableId, request.resource.data.seats.get('east', null))
+            && isMember(tableId, request.resource.data.seats.get('south', null))
+            && isMember(tableId, request.resource.data.seats.get('west', null))
+            && isMember(tableId, request.resource.data.seats.get('north', null))
             && (
               (
                 resource.data.playerCount == 3
