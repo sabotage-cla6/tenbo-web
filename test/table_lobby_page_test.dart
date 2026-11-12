@@ -18,19 +18,21 @@ Widget buildLobby({
       tableName: 'テスト卓',
       playerCount: playerCount,
       ownerName: 'テストプレイヤー',
-      membersStream: membersStream ?? Stream.value(const [
+      // 参加者Streamの更新で内側の座席StreamBuilderも再構築されるため、
+      // テスト用Streamは複数回listenできるbroadcast Streamにしておく。
+      membersStream: (membersStream ?? Stream.value(const [
         TableMember(
           uid: 'owner-1',
           displayName: 'テストプレイヤー',
           isOwner: true,
         ),
-      ]),
-      seatsStream: seatsStream ?? Stream.value(const {
+      ])).asBroadcastStream(),
+      seatsStream: (seatsStream ?? Stream.value(const {
         '東': null,
         '南': null,
         '西': null,
         '北': null,
-      }),
+      })).asBroadcastStream(),
       currentUserUid: currentUserUid,
       assignSeat: assignSeat,
       randomizeSeats: randomizeSeats,
@@ -258,14 +260,14 @@ void main() {
                           playerCount: 4,
                           ownerName: 'テストプレイヤー',
                           currentUserUid: 'owner-1',
-                          seatsStream: Stream.value(const {'東': null, '南': null, '西': null, '北': null}),
+                          seatsStream: Stream.value(const {'東': null, '南': null, '西': null, '北': null}).asBroadcastStream(),
                           membersStream: Stream.value(const [
                             TableMember(
                               uid: 'owner-1',
                               displayName: 'テストプレイヤー',
                               isOwner: true,
                             ),
-                          ]),
+                          ]).asBroadcastStream(),
                           settings: {},
                         ),
                       ),
