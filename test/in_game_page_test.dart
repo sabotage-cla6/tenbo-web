@@ -111,6 +111,7 @@ void main() {
       expect(find.text('24,000'), findsOneWidget);
       expect(find.text('1,000点'), findsOneWidget);
       expect(find.text('⚡ 立直'), findsOneWidget);
+      expect(find.text('もう一度押して解除'), findsOneWidget);
       await tester.tap(riichiButton);
       await tester.pump();
       expect(riichiCallCount, 2);
@@ -127,6 +128,7 @@ void main() {
       await tester.pump();
       expect(find.text('25,000'), findsOneWidget);
       expect(find.text('⚡ 立直'), findsNothing);
+      expect(find.text('もう一度押して解除'), findsNothing);
       await controller.close();
     });
 
@@ -173,7 +175,7 @@ void main() {
           },
         ),
       ));
-      when(repository.declareRiichi('table-123')).thenAnswer((_) async {});
+      when(repository.toggleRiichi('table-123')).thenAnswer((_) async {});
 
       await tester.pumpWidget(MaterialApp(
         home: InGamePage(
