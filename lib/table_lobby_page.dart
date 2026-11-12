@@ -76,15 +76,16 @@ class TableLobbyPage extends StatelessWidget {
 
   Future<void> _runSeatAction(
     BuildContext context,
-    Future<void> Function() action,
-  ) async {
+    Future<void> Function() action, {
+    String failureMessage = '座席の更新に失敗しました。',
+  }) async {
     try {
       await action();
     } catch (error) {
       if (!context.mounted) return;
       final message = error is StateError
           ? error.message.toString()
-          : '座席の更新に失敗しました。';
+          : failureMessage;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(message)),
       );
@@ -466,6 +467,7 @@ class TableLobbyPage extends StatelessWidget {
                                                             context,
                                                             startGame ??
                                                                 () => TableRepository().startGame(tableId),
+                                                            failureMessage: '対局の開始に失敗しました。',
                                                           )
                                                       : null,
                                                   icon: const Icon(Icons.play_arrow),
