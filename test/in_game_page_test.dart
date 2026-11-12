@@ -148,6 +148,42 @@ void main() {
       verify(repository.watchGameState('table-123')).called(1);
     });
 
+    testWidgets('リーチ操作を注入されたRepositoryへ依頼する', (tester) async {
+      final repository = MockTableRepository();
+      when(repository.watchGameState('table-123')).thenAnswer((_) => Stream.value(
+        const GameState(
+          round: GameRound(wind: 'east', number: 1, honba: 0, seq: 1),
+          kyotakuSticks: 0,
+          players: {
+            'south-uid': GamePlayerState(score: 25000, isRiichi: false),
+          },
+        ),
+      ));
+      when(repository.declareRiichi('table-123')).thenAnswer((_) async {});
+
+      await tester.pumpWidget(MaterialApp(
+        home: InGamePage(
+          tableName: 'テスト卓',
+          players: const [
+            GamePlayer(uid: 'south-uid', wind: '南', name: '自分', score: 25000),
+          ],
+          tableId: 'table-123',
+          currentUserUid: 'south-uid',
+          repository: repository,
+        ),
+      ));
+      await tester.pump();
+
+      await tester.ensureVisible(find.text('リーチ'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('リーチ'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('リーチする'));
+      await tester.pumpAndSettle();
+
+      verify(repository.declareRiichi('table-123')).called(1);
+    });
+
     testWidgets('操作ボタンは未実装であることを案内する', (tester) async {
       await tester.pumpWidget(buildPage());
 
