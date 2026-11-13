@@ -144,10 +144,6 @@ class InGamePage extends StatelessWidget {
     final selfUid = currentUserUid ?? (tableId == null ? null : _repository.currentUserUid);
     final selfMatches = selfUid == null ? <GamePlayer>[] : displayPlayers.where((player) => player.uid == selfUid).toList();
     final selfPlayer = selfMatches.isEmpty ? null : selfMatches.first;
-    GamePlayer? findPlayer(String wind) {
-      final matching = displayPlayers.where((player) => player.wind == wind);
-      return matching.isEmpty ? null : matching.first;
-    }
     final isSanma = !displayPlayers.any((player) => player.wind == '北');
     return Scaffold(
       backgroundColor: _paper,
