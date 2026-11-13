@@ -126,7 +126,7 @@ void main() {
         },
       ));
       await tester.pump();
-      expect(find.text('25,000'), findsOneWidget);
+      expect(find.text('25,000'), findsNWidgets(4));
       expect(find.text('⚡ 立直'), findsNothing);
       expect(find.text('もう一度押して解除'), findsNothing);
       await controller.close();
