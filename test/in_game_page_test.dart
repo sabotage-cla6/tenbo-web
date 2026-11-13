@@ -83,6 +83,40 @@ void main() {
       }
     });
 
+    testWidgets('三人麻雀でも自分の座席が一番手前に表示される', (tester) async {
+      const sanmaPlayers = [
+        GamePlayer(uid: 'east-uid', wind: '東', name: '東家', score: 35000),
+        GamePlayer(uid: 'south-uid', wind: '南', name: '南家', score: 35000),
+        GamePlayer(uid: 'west-uid', wind: '西', name: '西家', score: 35000),
+      ];
+
+      for (final userId in ['east-uid', 'south-uid', 'west-uid']) {
+        await tester.pumpWidget(MaterialApp(
+          home: InGamePage(
+            tableName: '三人麻雀テスト卓',
+            players: sanmaPlayers,
+            currentUserUid: userId,
+          ),
+        ));
+        await tester.pumpAndSettle();
+
+        final selfName = {
+          'east-uid': '東家',
+          'south-uid': '南家',
+          'west-uid': '西家',
+        }[userId]!;
+        final selfY = tester.getCenter(find.text(selfName)).dy;
+        for (final otherName in ['東家', '南家', '西家']) {
+          if (otherName == selfName) continue;
+          expect(
+            selfY,
+            greaterThan(tester.getCenter(find.text(otherName)).dy),
+            reason: '${selfName}が三人麻雀でも一番手前に表示されること',
+          );
+        }
+      }
+    });
+
     testWidgets('三人麻雀では北家を表示せず三人麻雀と表示する', (tester) async {
       const sanmaPlayers = [
         GamePlayer(wind: '東', name: '東家', score: 35000, isDealer: true),
