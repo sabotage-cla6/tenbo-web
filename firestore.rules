@@ -148,11 +148,23 @@ service cloud.firestore {
             && request.resource.data.game.diff(resource.data.game).affectedKeys().hasOnly(['players', 'kyotakuSticks'])
             && request.resource.data.game.players.diff(resource.data.game.players).affectedKeys().hasOnly([request.auth.uid])
             && request.resource.data.game.players[request.auth.uid].diff(resource.data.game.players[request.auth.uid]).affectedKeys().hasOnly(['score', 'isRiichi'])
-            && resource.data.game.players[request.auth.uid].isRiichi == false
-            && request.resource.data.game.players[request.auth.uid].isRiichi == true
-            && request.resource.data.game.players[request.auth.uid].score == resource.data.game.players[request.auth.uid].score - 1000
-            && resource.data.game.players[request.auth.uid].score >= 1000
-            && request.resource.data.game.kyotakuSticks == resource.data.game.kyotakuSticks + 1
+            && (
+              (
+                // リーチ宣言：1,000点を供託に移し、リーチ状態にする。
+                resource.data.game.players[request.auth.uid].isRiichi == false
+                && request.resource.data.game.players[request.auth.uid].isRiichi == true
+                && resource.data.game.players[request.auth.uid].score >= 1000
+                && request.resource.data.game.players[request.auth.uid].score == resource.data.game.players[request.auth.uid].score - 1000
+                && request.resource.data.game.kyotakuSticks == resource.data.game.kyotakuSticks + 1
+              )
+              || (
+                // リーチ取消：1,000点を返し、供託を1本戻す。
+                resource.data.game.players[request.auth.uid].isRiichi == true
+                && request.resource.data.game.players[request.auth.uid].isRiichi == false
+                && request.resource.data.game.players[request.auth.uid].score == resource.data.game.players[request.auth.uid].score + 1000
+                && request.resource.data.game.kyotakuSticks == (resource.data.game.kyotakuSticks > 0 ? resource.data.game.kyotakuSticks - 1 : 0)
+              )
+            )
           )
         );
       allow delete: if signedIn()
