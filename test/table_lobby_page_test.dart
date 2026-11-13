@@ -1,16 +1,23 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mockito/mockito.dart';
 import 'package:tenbo_web/table_lobby_page.dart';
 import 'package:tenbo_web/table_repository.dart';
+import 'helpers/mock_table_repository.dart';
 
 Widget buildLobby({
   int playerCount = 4,
   Stream<List<TableMember>>? membersStream,
   Stream<Map<String, String?>>? seatsStream,
+  Stream<String>? statusStream,
+  Future<void> Function()? startGame,
   Future<void> Function(String wind)? assignSeat,
   Future<void> Function()? randomizeSeats,
   Future<void> Function()? chooseDealer,
   String currentUserUid = 'owner-1',
+  TableRepository? repository,
 }) {
   return MaterialApp(
     home: TableLobbyPage(
@@ -33,7 +40,10 @@ Widget buildLobby({
         '西': null,
         '北': null,
       })).asBroadcastStream(),
+      statusStream: statusStream ?? Stream<String>.value('waiting'),
+      startGame: startGame,
       currentUserUid: currentUserUid,
+      repository: repository ?? MockTableRepository(),
       assignSeat: assignSeat,
       randomizeSeats: randomizeSeats,
       chooseDealer: chooseDealer,
@@ -70,7 +80,6 @@ void main() {
       expect(find.text('西'), findsOneWidget);
       expect(find.text('北'), findsOneWidget);
     });
-
 
     testWidgets('Firestoreから届いた参加者を複数表示する', (tester) async {
       await tester.pumpWidget(
@@ -115,6 +124,84 @@ void main() {
       for (final name in ['A', 'B', 'C', 'D', 'E']) {
         expect(find.text(name), findsOneWidget);
       }
+    });
+
+    testWidgets('Firestoreの卓状態が対局中になると画面遷移する', (tester) async {
+      // 対局開始ボタンが画面内に収まるサイズでテストする。
+      tester.view.physicalSize = const Size(900, 1200);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+      final statusController = StreamController<String>.broadcast();
+      addTearDown(statusController.close);
+      final repository = MockTableRepository();
+      when(repository.watchGameState('table-123')).thenAnswer((_) => Stream.value(
+        const GameState(
+          round: GameRound(wind: 'east', number: 1, honba: 0, seq: 1),
+          kyotakuSticks: 0,
+          players: {},
+        ),
+      ));
+
+      await tester.pumpWidget(
+        buildLobby(
+          membersStream: Stream.value(const [
+            TableMember(uid: 'owner-1', displayName: 'プレイヤーA', isOwner: true),
+            TableMember(uid: 'guest-2', displayName: 'プレイヤーB', isOwner: false),
+            TableMember(uid: 'guest-3', displayName: 'プレイヤーC', isOwner: false),
+            TableMember(uid: 'guest-4', displayName: 'プレイヤーD', isOwner: false),
+          ]),
+          seatsStream: Stream.value(const {
+            '東': 'owner-1',
+            '南': 'guest-2',
+            '西': 'guest-3',
+            '北': 'guest-4',
+          }),
+          statusStream: statusController.stream,
+          repository: repository,
+        ),
+      );
+      await tester.pump();
+
+      statusController.add('playing');
+      await tester.pump();
+      await tester.pumpAndSettle();
+
+      expect(find.text('対局中'), findsOneWidget);
+      expect(find.text('プレイヤーA'), findsOneWidget);
+      expect(find.text('プレイヤーD'), findsOneWidget);
+      verify(repository.watchGameState('table-123')).called(1);
+    });
+
+    testWidgets('対局開始ボタンで共有状態の更新処理を呼び出す', (tester) async {
+      var called = false;
+      await tester.pumpWidget(
+        buildLobby(
+          membersStream: Stream.value(const [
+            TableMember(uid: 'owner-1', displayName: 'プレイヤーA', isOwner: true),
+            TableMember(uid: 'guest-2', displayName: 'プレイヤーB', isOwner: false),
+            TableMember(uid: 'guest-3', displayName: 'プレイヤーC', isOwner: false),
+            TableMember(uid: 'guest-4', displayName: 'プレイヤーD', isOwner: false),
+          ]),
+          seatsStream: Stream.value(const {
+            '東': 'owner-1',
+            '南': 'guest-2',
+            '西': 'guest-3',
+            '北': 'guest-4',
+          }),
+          startGame: () async { called = true; },
+        ),
+      );
+      await tester.pump();
+
+      final startButton = find.widgetWithText(FilledButton, '対局を開始する');
+      await tester.ensureVisible(startButton);
+      await tester.tap(startButton);
+      await tester.pump();
+
+      expect(called, isTrue);
     });
 
     testWidgets('三人麻雀では座席を3つだけ表示する', (tester) async {
@@ -170,7 +257,6 @@ void main() {
 
       expect(selectedWind, '東');
     });
-
 
     testWidgets('起家・場決めボタンで座席をランダム化する処理を呼び出す', (tester) async {
       var called = false;
@@ -262,6 +348,8 @@ void main() {
                           playerCount: 4,
                           ownerName: 'テストプレイヤー',
                           currentUserUid: 'owner-1',
+                          repository: MockTableRepository(),
+                          statusStream: Stream<String>.value('waiting'),
                           seatsStream: Stream.value(const {'東': null, '南': null, '西': null, '北': null}).asBroadcastStream(),
                           membersStream: Stream.value(const [
                             TableMember(

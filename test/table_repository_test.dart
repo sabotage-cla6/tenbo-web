@@ -58,6 +58,28 @@ class MockTableStore extends Mock implements TableStore {
       ) as Stream<Map<String, String?>>;
 
   @override
+  Stream<String> watchStatus(String? tableId) =>
+      super.noSuchMethod(
+        Invocation.method(#watchStatus, [tableId]),
+        returnValue: const Stream<String>.empty(),
+      ) as Stream<String>;
+
+  @override
+  Stream<GameState> watchGameState(String? tableId) =>
+      super.noSuchMethod(Invocation.method(#watchGameState, [tableId]),
+        returnValue: const Stream<GameState>.empty()) as Stream<GameState>;
+  @override
+  Future<void> toggleRiichi(String? tableId, String? uid) =>
+      super.noSuchMethod(Invocation.method(#toggleRiichi, [tableId, uid]),
+        returnValue: Future<void>.value()) as Future<void>;
+  @override
+  Future<void> startGame(String? tableId, String? uid) =>
+      super.noSuchMethod(
+        Invocation.method(#startGame, [tableId, uid]),
+        returnValue: Future<void>.value(),
+      ) as Future<void>;
+
+  @override
   Future<void> randomizeSeats(String? tableId, int? playerCount, String? uid) =>
       super.noSuchMethod(
         Invocation.method(#randomizeSeats, [tableId, playerCount, uid]),
@@ -81,6 +103,26 @@ class MockTableStore extends Mock implements TableStore {
 }
 
 void main() {
+  group('GameState.fromMap', () {
+    test('局・本場・seq・供託・プレイヤー状態を読み込む', () {
+      final state = GameState.fromMap({
+        'round': {'wind': 'south', 'number': 2, 'honba': 1, 'seq': 3},
+        'kyotakuSticks': 2,
+        'players': {
+          'user-123': {'score': 24000, 'isRiichi': true},
+        },
+      });
+
+      expect(state.round.wind, 'south');
+      expect(state.round.number, 2);
+      expect(state.round.honba, 1);
+      expect(state.round.seq, 3);
+      expect(state.kyotakuSticks, 2);
+      expect(state.players['user-123']?.score, 24000);
+      expect(state.players['user-123']?.isRiichi, isTrue);
+    });
+  });
+
   late MockTableAuth auth;
   late MockTableStore store;
   late TableRepository repository;
@@ -108,6 +150,8 @@ void main() {
       displayName: anyNamed('displayName'),
     )).thenAnswer((_) async {});
     when(store.assignSeat(any, any, any)).thenAnswer((_) async {});
+    when(store.startGame(any, any)).thenAnswer((_) async {});
+    when(store.toggleRiichi(any, any)).thenAnswer((_) async {});
     when(store.randomizeSeats(any, any, any)).thenAnswer((_) async {});
     when(store.chooseDealer(any, any, any)).thenAnswer((_) async {});
   });
@@ -287,6 +331,33 @@ void main() {
   });
 
 
+  group('TableRepository.startGame', () {
+    test('ログイン中の対局者として卓の開始をStoreへ依頼する', () async {
+      await repository.startGame('table-123');
+      verify(store.startGame('table-123', 'user-123')).called(1);
+    });
+
+    test('未ログインなら卓の開始を依頼しない', () async {
+      when(auth.currentUser).thenReturn(null);
+      await expectLater(
+        repository.startGame('table-123'),
+        throwsA(isA<StateError>()),
+      );
+      verifyNever(store.startGame(any, any));
+    });
+  });
+
+  group('TableRepository.toggleRiichi', () {
+    test('ログイン中のユーザーとしてリーチをStoreへ依頼する', () async {
+      await repository.toggleRiichi('table-123');
+      verify(store.toggleRiichi('table-123', 'user-123')).called(1);
+    });
+    test('未ログインならリーチを依頼しない', () async {
+      when(auth.currentUser).thenReturn(null);
+      await expectLater(repository.toggleRiichi('table-123'), throwsA(isA<StateError>()));
+      verifyNever(store.toggleRiichi(any, any));
+    });
+  });
   group('TableRepository.assignSeat', () {
     test('ログイン中のユーザーを指定した座席へ割り当てる', () async {
       await repository.assignSeat('table-123', '北');

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'in_game_page.dart';
 import 'table_repository.dart';
 
 const _ink = Color(0xFF18352E);
@@ -17,10 +18,13 @@ class TableLobbyPage extends StatelessWidget {
     required this.ownerName,
     this.membersStream,
     this.seatsStream,
+    this.statusStream,
+    this.startGame,
     this.assignSeat,
     this.randomizeSeats,
     this.chooseDealer,
     this.currentUserUid,
+    this.repository,
     super.key,
   });
 
@@ -31,10 +35,15 @@ class TableLobbyPage extends StatelessWidget {
   final String ownerName;
   final Stream<List<TableMember>>? membersStream;
   final Stream<Map<String, String?>>? seatsStream;
+  final Stream<String>? statusStream;
+  final Future<void> Function()? startGame;
   final Future<void> Function(String wind)? assignSeat;
   final Future<void> Function()? randomizeSeats;
   final Future<void> Function()? chooseDealer;
   final String? currentUserUid;
+  final TableRepository? repository;
+
+  TableRepository get _repository => repository ?? TableRepository();
 
   static const _winds = ['東', '南', '西', '北'];
 
@@ -71,15 +80,16 @@ class TableLobbyPage extends StatelessWidget {
 
   Future<void> _runSeatAction(
     BuildContext context,
-    Future<void> Function() action,
-  ) async {
+    Future<void> Function() action, {
+    String failureMessage = '座席の更新に失敗しました。',
+  }) async {
     try {
       await action();
     } catch (error) {
       if (!context.mounted) return;
       final message = error is StateError
           ? error.message.toString()
-          : '座席の更新に失敗しました。';
+          : failureMessage;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(message)),
       );
@@ -91,7 +101,7 @@ class TableLobbyPage extends StatelessWidget {
     Map<String, String?> seats,
     int playerCount,
   ) {
-    final uid = currentUserUid ?? TableRepository().currentUserUid;
+    final uid = currentUserUid ?? _repository.currentUserUid;
     final canChoose = uid != null && seats.values.contains(uid);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -104,7 +114,7 @@ class TableLobbyPage extends StatelessWidget {
                     ? () => _runSeatAction(
                           context,
                           randomizeSeats ??
-                              () => TableRepository().randomizeSeats(
+                              () => _repository.randomizeSeats(
                                     tableId,
                                     playerCount,
                                   ),
@@ -126,7 +136,7 @@ class TableLobbyPage extends StatelessWidget {
                     ? () => _runSeatAction(
                           context,
                           chooseDealer ??
-                              () => TableRepository().chooseDealer(
+                              () => _repository.chooseDealer(
                                     tableId,
                                     playerCount,
                                   ),
@@ -328,7 +338,7 @@ class TableLobbyPage extends StatelessWidget {
                     ),
                     const SizedBox(height: 14),
                     StreamBuilder<List<TableMember>>(
-                      stream: membersStream ?? TableRepository().watchMembers(tableId),
+                      stream: membersStream ?? _repository.watchMembers(tableId),
                       initialData: [
                         TableMember(uid: 'owner', displayName: ownerName, isOwner: true),
                       ],
@@ -386,7 +396,7 @@ class TableLobbyPage extends StatelessWidget {
                                   style: TextStyle(color: _ink, fontWeight: FontWeight.bold)),
                               const SizedBox(height: 8),
                               StreamBuilder<Map<String, String?>>(
-                                stream: seatsStream ?? TableRepository().watchSeats(tableId),
+                                stream: seatsStream ?? _repository.watchSeats(tableId),
                                 initialData: const {'東': null, '南': null, '西': null, '北': null},
                                 builder: (context, seatSnapshot) {
                                   final seats = seatSnapshot.data ?? const <String, String?>{};
@@ -401,11 +411,11 @@ class TableLobbyPage extends StatelessWidget {
                                             wind: wind,
                                             playerName: memberByUid[seats[wind]]?.displayName,
                                             isOwner: memberByUid[seats[wind]]?.isOwner ?? false,
-                                            isMine: seats[wind] == (currentUserUid ?? TableRepository().currentUserUid),
+                                            isMine: seats[wind] == (currentUserUid ?? _repository.currentUserUid),
                                             onTap: () async {
                                               try {
                                                 final assign = assignSeat ??
-                                                    (seat) => TableRepository().assignSeat(tableId, seat);
+                                                    (seat) => _repository.assignSeat(tableId, seat);
                                                 await assign(wind);
                                               } catch (error) {
                                                 if (!context.mounted) return;
@@ -421,6 +431,75 @@ class TableLobbyPage extends StatelessWidget {
                                         ),
                                       const SizedBox(height: 14),
                                       _buildDealerButtons(context, seats, safePlayerCount),
+                                      const SizedBox(height: 18),
+                                      Builder(
+                                        builder: (context) {
+                                          final seatedPlayers = <String, String?>{
+                                            for (final wind in _winds.take(safePlayerCount))
+                                              wind: memberByUid[seats[wind]]?.displayName,
+                                          };
+                                          final allSeatsFilled = seatedPlayers.values.every(
+                                            (name) => name != null && name.trim().isNotEmpty,
+                                          );
+                                          final startingPoints =
+                                              (settings['startingPoints'] as num?)?.toInt() ??
+                                                  25000;
+                                          final gamePlayers = [
+                                            for (final wind in _winds.take(safePlayerCount))
+                                              GamePlayer(
+                                                uid: seats[wind],
+                                                wind: wind,
+                                                name: seatedPlayers[wind] ?? '参加者',
+                                                score: startingPoints,
+                                                isDealer: wind == '東',
+                                              ),
+                                          ];
+                                          return StreamBuilder<String>(
+                                            stream: statusStream ??
+                                                _repository.watchStatus(tableId),
+                                            initialData: 'waiting',
+                                            builder: (context, statusSnapshot) {
+                                              final isWaiting =
+                                                  (statusSnapshot.data ?? 'waiting') == 'waiting';
+                                              return _GameStatusRedirect(
+                                                isPlaying: statusSnapshot.data == 'playing' && allSeatsFilled,
+                                                tableName: tableName,
+                                                players: gamePlayers,
+                                                startingPoints: startingPoints,
+                                                tableId: tableId,
+                                                currentUserUid: currentUserUid ?? _repository.currentUserUid,
+                                                repository: _repository,
+                                                child: FilledButton.icon(
+                                                  onPressed: allSeatsFilled && isWaiting
+                                                      ? () => _runSeatAction(
+                                                            context,
+                                                            startGame ??
+                                                                () => _repository.startGame(tableId),
+                                                            failureMessage: '対局の開始に失敗しました。',
+                                                          )
+                                                      : null,
+                                                  icon: const Icon(Icons.play_arrow),
+                                                  label: Text(
+                                                    allSeatsFilled
+                                                        ? '対局を開始する'
+                                                        : '参加者が揃うと対局を開始できます',
+                                                  ),
+                                                  style: FilledButton.styleFrom(
+                                                    backgroundColor: _green,
+                                                    foregroundColor: Colors.white,
+                                                    disabledBackgroundColor:
+                                                        const Color(0xFFB7C3BC),
+                                                    disabledForegroundColor: Colors.white,
+                                                    padding: const EdgeInsets.symmetric(
+                                                      vertical: 16,
+                                                    ),
+                                                  ),
+                                                ),
+                                              );
+                                            },
+                                          );
+                                        },
+                                      ),
                                     ],
                                   );
                                 },
@@ -452,19 +531,6 @@ class TableLobbyPage extends StatelessWidget {
                       },
                     ),
                     const SizedBox(height: 14),
-                    const SizedBox(height: 22),
-                    FilledButton.icon(
-                      onPressed: null,
-                      icon: const Icon(Icons.play_arrow),
-                      label: const Text('参加者が揃うと対局を開始できます'),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: _green,
-                        foregroundColor: Colors.white,
-                        disabledBackgroundColor: const Color(0xFFB7C3BC),
-                        disabledForegroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                      ),
-                    ),
                     const SizedBox(height: 10),
                     OutlinedButton.icon(
                       onPressed: () => Navigator.of(context).pop(),
@@ -615,4 +681,72 @@ class _PlayerSeat extends StatelessWidget {
       ),
     );
   }
+}
+
+
+/// Firestore上の卓状態が対局中に変わったら、この端末も対局画面へ遷移する。
+class _GameStatusRedirect extends StatefulWidget {
+  const _GameStatusRedirect({
+    required this.isPlaying,
+    required this.tableName,
+    required this.players,
+    required this.startingPoints,
+    required this.tableId,
+    required this.currentUserUid,
+    required this.repository,
+    required this.child,
+  });
+
+  final bool isPlaying;
+  final String tableName;
+  final List<GamePlayer> players;
+  final int startingPoints;
+  final String tableId;
+  final String? currentUserUid;
+  final TableRepository? repository;
+  final Widget child;
+
+  @override
+  State<_GameStatusRedirect> createState() => _GameStatusRedirectState();
+}
+
+class _GameStatusRedirectState extends State<_GameStatusRedirect> {
+  bool _hasNavigated = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _navigateIfNeeded();
+  }
+
+  @override
+  void didUpdateWidget(covariant _GameStatusRedirect oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isPlaying && !oldWidget.isPlaying) {
+      _navigateIfNeeded();
+    }
+  }
+
+  void _navigateIfNeeded() {
+    if (!widget.isPlaying || _hasNavigated) return;
+    _hasNavigated = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute<void>(
+          builder: (_) => InGamePage(
+            tableName: widget.tableName,
+            players: widget.players,
+            startingPoints: widget.startingPoints,
+            tableId: widget.tableId,
+            currentUserUid: widget.currentUserUid,
+            repository: widget.repository,
+          ),
+        ),
+      );
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }
