@@ -66,7 +66,7 @@ void main() {
 
 
     testWidgets('確認ダイアログなしでリーチし、もう一度押すと解除を依頼する', (tester) async {
-      final controller = StreamController<GameState>();
+      final controller = StreamController<GameState>.broadcast(sync: true);
       var riichiCallCount = 0;
       const statePlayers = [
         GamePlayer(uid: 'east-uid', wind: '東', name: '東家', score: 25000, isDealer: true),
