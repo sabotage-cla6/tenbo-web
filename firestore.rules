@@ -21,6 +21,14 @@ service cloud.firestore {
           || resource.data.status == 'waiting'
           || exists(/databases/$(database)/documents/tables/$(tableId)/members/$(request.auth.uid)));
 
+      // 対局再開時は、ログインユーザー自身が座っている卓だけ検索できる。
+      // クライアントは seats.<wind> == request.auth.uid の条件を付けて検索する。
+      allow list: if signedIn()
+        && (resource.data.seats.get('east', null) == request.auth.uid
+          || resource.data.seats.get('south', null) == request.auth.uid
+          || resource.data.seats.get('west', null) == request.auth.uid
+          || resource.data.seats.get('north', null) == request.auth.uid);
+
       // 卓の設定変更・削除はオーナーのみ。
       // 参加者登録に伴う memberCount / updatedAt の更新だけは、
       // 同じトランザクションで本人の参加者ドキュメントが新規作成される場合に許可する。
