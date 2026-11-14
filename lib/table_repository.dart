@@ -87,6 +87,14 @@ class TableInfo {
   }
 }
 
+/// ログイン後に再開する対局の情報。
+class ActiveTableInfo {
+  const ActiveTableInfo({required this.table, required this.seats, required this.members});
+  final TableInfo table;
+  final Map<String, String?> seats;
+  final List<TableMember> members;
+}
+
 /// 卓の参加者情報。
 class TableMember {
   const TableMember({
@@ -122,6 +130,7 @@ abstract interface class TableStore {
     required String ownerName,
   });
   Future<TableInfo?> findWaitingTableById(String tableId);
+  Future<ActiveTableInfo?> findPlayingTableForUser(String uid);
   Future<void> joinWaitingTable(
     String tableId, {
     required String uid,
@@ -189,6 +198,41 @@ class FirestoreTableStore implements TableStore {
     final data = document.data();
     if (data == null || data['status'] != 'waiting') return null;
     return TableInfo.fromDocument(document.id, data);
+  }
+
+  @override
+  Future<ActiveTableInfo?> findPlayingTableForUser(String uid) async {
+    const seatFields = ['east', 'south', 'west', 'north'];
+    final matches = <QueryDocumentSnapshot<Map<String, dynamic>>>[];
+    for (final field in seatFields) {
+      final snapshot = await _firestore.collection('tables')
+          .where('seats.$field', isEqualTo: uid).get();
+      for (final document in snapshot.docs) {
+        if (document.data()['status'] == 'playing' &&
+            !matches.any((match) => match.id == document.id)) {
+          matches.add(document);
+        }
+      }
+    }
+    if (matches.isEmpty) return null;
+    matches.sort((a, b) {
+      final aUpdated = a.data()['updatedAt'];
+      final bUpdated = b.data()['updatedAt'];
+      if (aUpdated is Timestamp && bUpdated is Timestamp) return bUpdated.compareTo(aUpdated);
+      return 0;
+    });
+    final document = matches.first;
+    final data = document.data();
+    final rawSeats = data['seats'];
+    final seats = rawSeats is Map
+        ? {'東': rawSeats['east'] as String?, '南': rawSeats['south'] as String?,
+            '西': rawSeats['west'] as String?, '北': rawSeats['north'] as String?}
+        : const <String, String?>{};
+    final memberSnapshot = await document.reference.collection('members').get();
+    final members = memberSnapshot.docs
+        .map((member) => TableMember.fromDocument(member.id, member.data())).toList();
+    return ActiveTableInfo(
+      table: TableInfo.fromDocument(document.id, data), seats: seats, members: members);
   }
 
   @override
@@ -571,6 +615,12 @@ class TableRepository {
       throw ArgumentError.value(tableId, 'tableId', '卓IDを入力してください。');
     }
     return _store.findWaitingTableById(normalizedTableId);
+  }
+
+  Future<ActiveTableInfo?> findPlayingTableForCurrentUser() async {
+    final user = _auth.currentUser;
+    if (user == null) throw StateError('対局を再開するにはログインが必要です。');
+    return _store.findPlayingTableForUser(user.uid);
   }
 
   Future<void> joinWaitingTable(String tableId) async {
