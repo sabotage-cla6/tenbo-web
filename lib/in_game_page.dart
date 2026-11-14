@@ -72,6 +72,58 @@ class InGamePage extends StatelessWidget {
     );
   }
 
+  List<Widget> _buildPlayerPositions({
+    required List<GamePlayer> displayPlayers,
+    required GamePlayer? selfPlayer,
+    required int startingPoints,
+    required String round,
+    required int honba,
+    required int kyotaku,
+  }) {
+    final positions = List<Widget>.filled(9, const SizedBox.shrink());
+
+    if (selfPlayer == null) {
+      // UIDが特定できない場合は従来どおり東家を左、南家を手前に表示する。
+      const fixedPositions = {'北': 1, '東': 3, '西': 5, '南': 7};
+      for (final player in displayPlayers) {
+        final position = fixedPositions[player.wind];
+        if (position != null) {
+          positions[position] = _PlayerPanel(
+            player: player,
+            startingPoints: startingPoints,
+          );
+        }
+      }
+    } else {
+      const windOrder = ['東', '南', '西', '北'];
+      final selfIndex = windOrder.indexOf(selfPlayer.wind);
+      for (final player in displayPlayers) {
+        final playerIndex = windOrder.indexOf(player.wind);
+        if (playerIndex < 0 || selfIndex < 0) continue;
+        final relativePosition = (playerIndex - selfIndex + 4) % 4;
+        // 自分を手前に置き、風の順に右・対面・左へ配置する。
+        final gridPosition = switch (relativePosition) {
+          0 => 7,
+          1 => 5,
+          2 => 1,
+          _ => 3,
+        };
+        positions[gridPosition] = _PlayerPanel(
+          player: player,
+          startingPoints: startingPoints,
+          isSelf: player.uid == selfPlayer.uid,
+        );
+      }
+    }
+
+    positions[4] = _RoundPanel(
+      round: round,
+      honba: honba,
+      kyotaku: kyotaku,
+    );
+    return positions;
+  }
+
   Widget _buildPage(BuildContext context, GameState? gameState) {
     final displayPlayers = players.map((player) {
       final state = player.uid == null ? null : gameState?.players[player.uid];
@@ -92,10 +144,6 @@ class InGamePage extends StatelessWidget {
     final selfUid = currentUserUid ?? (tableId == null ? null : _repository.currentUserUid);
     final selfMatches = selfUid == null ? <GamePlayer>[] : displayPlayers.where((player) => player.uid == selfUid).toList();
     final selfPlayer = selfMatches.isEmpty ? null : selfMatches.first;
-    GamePlayer? findPlayer(String wind) {
-      final matching = displayPlayers.where((player) => player.wind == wind);
-      return matching.isEmpty ? null : matching.first;
-    }
     final isSanma = !displayPlayers.any((player) => player.wind == '北');
     return Scaffold(
       backgroundColor: _paper,
@@ -178,17 +226,14 @@ class InGamePage extends StatelessWidget {
                                     crossAxisCount: 3,
                                     mainAxisSpacing: 7,
                                     crossAxisSpacing: 7,
-                                    children: [
-                                      const SizedBox.shrink(),
-                                      _PlayerPanel(player: findPlayer('北'), startingPoints: startingPoints, isSelf: selfUid != null && findPlayer('北')?.uid == selfUid),
-                                      const SizedBox.shrink(),
-                                      _PlayerPanel(player: findPlayer('東'), startingPoints: startingPoints, isSelf: selfUid != null && findPlayer('東')?.uid == selfUid),
-                                      _RoundPanel(round: displayRound, honba: displayHonba, kyotaku: displayKyotaku),
-                                      _PlayerPanel(player: findPlayer('西'), startingPoints: startingPoints, isSelf: selfUid != null && findPlayer('西')?.uid == selfUid),
-                                      const SizedBox.shrink(),
-                                      _PlayerPanel(player: findPlayer('南'), isSelf: selfUid != null && findPlayer('南')?.uid == selfUid, startingPoints: startingPoints),
-                                      const SizedBox.shrink(),
-                                    ],
+                                    children: _buildPlayerPositions(
+                                      displayPlayers: displayPlayers,
+                                      selfPlayer: selfPlayer,
+                                      startingPoints: startingPoints,
+                                      round: displayRound,
+                                      honba: displayHonba,
+                                      kyotaku: displayKyotaku,
+                                    ),
                                   ),
                                 ),
                               ),

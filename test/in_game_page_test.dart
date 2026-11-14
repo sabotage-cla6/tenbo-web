@@ -50,6 +50,73 @@ void main() {
       expect(find.text('精算'), findsOneWidget);
     });
 
+    testWidgets('自分の座席が常に画面の一番手前に表示される', (tester) async {
+      const seatedPlayers = [
+        GamePlayer(uid: 'east-uid', wind: '東', name: '東家', score: 25000),
+        GamePlayer(uid: 'south-uid', wind: '南', name: '南家', score: 25000),
+        GamePlayer(uid: 'west-uid', wind: '西', name: '西家', score: 25000),
+        GamePlayer(uid: 'north-uid', wind: '北', name: '北家', score: 25000),
+      ];
+      const userIds = ['east-uid', 'south-uid', 'west-uid', 'north-uid'];
+      const names = ['東家', '南家', '西家', '北家'];
+
+      for (final userId in userIds) {
+        await tester.pumpWidget(MaterialApp(
+          home: InGamePage(
+            tableName: 'テスト卓',
+            players: seatedPlayers,
+            currentUserUid: userId,
+          ),
+        ));
+        await tester.pumpAndSettle();
+
+        final selfIndex = userIds.indexOf(userId);
+        final selfY = tester.getCenter(find.text(names[selfIndex])).dy;
+        for (var i = 0; i < names.length; i++) {
+          if (i == selfIndex) continue;
+          expect(
+            selfY,
+            greaterThan(tester.getCenter(find.text(names[i])).dy),
+            reason: '${names[selfIndex]}が自分の画面で一番手前に表示されること',
+          );
+        }
+      }
+    });
+
+    testWidgets('三人麻雀でも自分の座席が一番手前に表示される', (tester) async {
+      const sanmaPlayers = [
+        GamePlayer(uid: 'east-uid', wind: '東', name: '東家', score: 35000),
+        GamePlayer(uid: 'south-uid', wind: '南', name: '南家', score: 35000),
+        GamePlayer(uid: 'west-uid', wind: '西', name: '西家', score: 35000),
+      ];
+
+      for (final userId in ['east-uid', 'south-uid', 'west-uid']) {
+        await tester.pumpWidget(MaterialApp(
+          home: InGamePage(
+            tableName: '三人麻雀テスト卓',
+            players: sanmaPlayers,
+            currentUserUid: userId,
+          ),
+        ));
+        await tester.pumpAndSettle();
+
+        final selfName = {
+          'east-uid': '東家',
+          'south-uid': '南家',
+          'west-uid': '西家',
+        }[userId]!;
+        final selfY = tester.getCenter(find.text(selfName)).dy;
+        for (final otherName in ['東家', '南家', '西家']) {
+          if (otherName == selfName) continue;
+          expect(
+            selfY,
+            greaterThan(tester.getCenter(find.text(otherName)).dy),
+            reason: '${selfName}が三人麻雀でも一番手前に表示されること',
+          );
+        }
+      }
+    });
+
     testWidgets('三人麻雀では北家を表示せず三人麻雀と表示する', (tester) async {
       const sanmaPlayers = [
         GamePlayer(wind: '東', name: '東家', score: 35000, isDealer: true),
