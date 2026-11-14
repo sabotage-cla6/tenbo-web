@@ -10,11 +10,13 @@ class AuthGate extends StatelessWidget {
   const AuthGate({
     required this.firebaseReady,
     this.repository,
+    this.authStateStream,
     super.key,
   });
 
   final bool firebaseReady;
   final TableRepository? repository;
+  final Stream<User?>? authStateStream;
 
   @override
   Widget build(BuildContext context) {
@@ -23,7 +25,7 @@ class AuthGate extends StatelessWidget {
     }
 
     return StreamBuilder<User?>(
-      stream: FirebaseAuth.instance.authStateChanges(),
+      stream: authStateStream ?? FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const _LoadingPage();
