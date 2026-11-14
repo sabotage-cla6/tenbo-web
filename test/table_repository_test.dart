@@ -30,6 +30,13 @@ class MockTableStore extends Mock implements TableStore {
       ) as Future<TableInfo?>;
 
   @override
+  Future<TableInfo?> findPlayingTableForUser(String? uid) =>
+      super.noSuchMethod(
+        Invocation.method(#findPlayingTableForUser, [uid]),
+        returnValue: Future<TableInfo?>.value(null),
+      ) as Future<TableInfo?>;
+
+  @override
   Future<void> joinWaitingTable(
     String? tableId, {
     String? uid,
@@ -286,6 +293,36 @@ void main() {
       );
 
       verifyNever(store.findWaitingTableById(''));
+    });
+  });
+
+  group('TableRepository.findPlayingTableForCurrentUser', () {
+    test('ログイン中のユーザーIDで対局中の卓を検索する', () async {
+      const table = TableInfo(
+        id: 'table-playing',
+        name: '対局中の卓',
+        ownerName: 'オーナー',
+        playerCount: 4,
+        settings: {'startingPoints': 25000},
+      );
+      when(store.findPlayingTableForUser('user-123'))
+          .thenAnswer((_) async => table);
+
+      final result = await repository.findPlayingTableForCurrentUser();
+
+      expect(result, table);
+      verify(store.findPlayingTableForUser('user-123')).called(1);
+    });
+
+    test('未ログインなら卓検索を行わない', () async {
+      when(auth.currentUser).thenReturn(null);
+
+      await expectLater(
+        repository.findPlayingTableForCurrentUser(),
+        throwsA(isA<StateError>()),
+      );
+
+      verifyNever(store.findPlayingTableForUser(any));
     });
   });
 

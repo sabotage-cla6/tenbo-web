@@ -122,6 +122,7 @@ abstract interface class TableStore {
     required String ownerName,
   });
   Future<TableInfo?> findWaitingTableById(String tableId);
+  Future<TableInfo?> findPlayingTableForUser(String uid);
   Future<void> joinWaitingTable(
     String tableId, {
     required String uid,
@@ -189,6 +190,34 @@ class FirestoreTableStore implements TableStore {
     final data = document.data();
     if (data == null || data['status'] != 'waiting') return null;
     return TableInfo.fromDocument(document.id, data);
+  }
+
+  @override
+  Future<TableInfo?> findPlayingTableForUser(String uid) async {
+    // メンバー情報を横断検索し、自分が着席している対局中の卓を探す。
+    final memberSnapshots = await _firestore
+        .collectionGroup('members')
+        .where('uid', isEqualTo: uid)
+        .get();
+
+    for (final member in memberSnapshots.docs) {
+      final tableRef = member.reference.parent.parent;
+      if (tableRef == null) continue;
+
+      final tableSnapshot = await tableRef.get();
+      final data = tableSnapshot.data();
+      final seats = data?['seats'];
+      if (!tableSnapshot.exists ||
+          data == null ||
+          data['status'] != 'playing' ||
+          seats is! Map ||
+          !seats.values.contains(uid)) {
+        continue;
+      }
+
+      return TableInfo.fromDocument(tableSnapshot.id, data);
+    }
+    return null;
   }
 
   @override
@@ -571,6 +600,22 @@ class TableRepository {
       throw ArgumentError.value(tableId, 'tableId', '卓IDを入力してください。');
     }
     return _store.findWaitingTableById(normalizedTableId);
+  }
+
+  Future<TableInfo?> findPlayingTableForCurrentUser() async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw StateError('対局中の卓を確認するにはログインが必要です。');
+    }
+    return findPlayingTableForUser(user.uid);
+  }
+
+  /// 認証状態から受け取った UID を使って、参加中の対局を検索する。
+  Future<TableInfo?> findPlayingTableForUser(String uid) {
+    if (uid.isEmpty) {
+      throw ArgumentError.value(uid, 'uid', 'ユーザーIDが空です。');
+    }
+    return _store.findPlayingTableForUser(uid);
   }
 
   Future<void> joinWaitingTable(String tableId) async {

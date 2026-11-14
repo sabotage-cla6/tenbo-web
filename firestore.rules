@@ -10,6 +10,13 @@ service cloud.firestore {
         || exists(/databases/$(database)/documents/tables/$(tableId)/members/$(userId));
     }
 
+    // ログイン後に自分の参加卓を検索するための collection group query。
+    // uid 条件で本人のメンバードキュメントだけを取得できるようにする。
+    match /{path=**}/members/{userId} {
+      allow list: if signedIn()
+        && resource.data.uid == request.auth.uid;
+    }
+
     match /tables/{tableId} {
       allow create: if signedIn()
         && request.resource.data.ownerUid == request.auth.uid;
