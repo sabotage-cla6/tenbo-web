@@ -17,7 +17,7 @@ void main() {
 
   testWidgets('対局中の卓がなければホーム画面を表示する', (tester) async {
     final repository = MockTableRepository();
-    when(repository.findPlayingTableForCurrentUser())
+    when(repository.findPlayingTableForUser('user-123'))
         .thenAnswer((_) async => null);
 
     await tester.pumpWidget(MaterialApp(
@@ -30,17 +30,17 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('ホーム画面'), findsOneWidget);
-    verify(repository.findPlayingTableForCurrentUser()).called(1);
+    verify(repository.findPlayingTableForUser('user-123')).called(1);
   });
 
   testWidgets('参加中の対局があれば対局画面へ自動復帰する', (tester) async {
     final repository = MockTableRepository();
-    when(repository.findPlayingTableForCurrentUser())
+    when(repository.findPlayingTableForUser('user-123'))
         .thenAnswer((_) async => playingTable);
     when(repository.watchMembers('table-playing')).thenAnswer(
       (_) => Stream.value(const [
         TableMember(uid: 'east-uid', displayName: '東家', isOwner: true),
-        TableMember(uid: 'south-uid', displayName: '南家', isOwner: false),
+        TableMember(uid: 'user-123', displayName: '南家', isOwner: false),
         TableMember(uid: 'west-uid', displayName: '西家', isOwner: false),
         TableMember(uid: 'north-uid', displayName: '北家', isOwner: false),
       ]),
@@ -78,7 +78,7 @@ void main() {
 
     expect(find.text('東1局'), findsOneWidget);
     expect(find.text('対局中'), findsOneWidget);
-    verify(repository.findPlayingTableForCurrentUser()).called(1);
+    verify(repository.findPlayingTableForUser('user-123')).called(1);
     verify(repository.watchGameState('table-playing')).called(1);
   });
 }
