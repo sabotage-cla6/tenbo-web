@@ -14,8 +14,8 @@ class MockTableRepository extends Mock implements TableRepository {
       ) as String?;
 
   @override
-  Future<TableInfo?> findPlayingTableForCurrentUser() => super.noSuchMethod(
-        Invocation.method(#findPlayingTableForCurrentUser, []),
+  Future<TableInfo?> findPlayingTableForUser(String? uid) => super.noSuchMethod(
+        Invocation.method(#findPlayingTableForUser, [uid]),
         returnValue: Future<TableInfo?>.value(null),
       ) as Future<TableInfo?>;
 
