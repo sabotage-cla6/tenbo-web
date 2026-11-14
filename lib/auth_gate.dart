@@ -40,11 +40,13 @@ class AuthenticatedHomeGate extends StatefulWidget {
   const AuthenticatedHomeGate({
     required this.uid,
     this.repository,
+    this.homePage,
     super.key,
   });
 
   final String uid;
   final TableRepository? repository;
+  final Widget? homePage;
 
   @override
   State<AuthenticatedHomeGate> createState() => _AuthenticatedHomeGateState();
@@ -59,6 +61,14 @@ class _AuthenticatedHomeGateState extends State<AuthenticatedHomeGate> {
     super.initState();
     _repository = widget.repository ?? TableRepository();
     _playingTableFuture = _repository.findPlayingTableForCurrentUser();
+  }
+
+  @override
+  void didUpdateWidget(covariant AuthenticatedHomeGate oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.uid != oldWidget.uid) {
+      _playingTableFuture = _repository.findPlayingTableForCurrentUser();
+    }
   }
 
   @override
@@ -77,7 +87,7 @@ class _AuthenticatedHomeGateState extends State<AuthenticatedHomeGate> {
           if (snapshot.hasError) {
             debugPrint('Failed to find a playing table: ${snapshot.error}');
           }
-          return const HomePage();
+          return widget.homePage ?? const HomePage();
         }
 
         return TableLobbyPage(

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:tenbo_web/auth_gate.dart';
-import 'package:tenbo_web/home_page.dart';
 import 'package:tenbo_web/table_repository.dart';
 
 import 'helpers/mock_table_repository.dart';
@@ -25,11 +24,12 @@ void main() {
       home: AuthenticatedHomeGate(
         uid: 'user-123',
         repository: repository,
+        homePage: const Scaffold(body: Text('ホーム画面')),
       ),
     ));
     await tester.pumpAndSettle();
 
-    expect(find.text('対局メニュー'), findsOneWidget);
+    expect(find.text('ホーム画面'), findsOneWidget);
     verify(repository.findPlayingTableForCurrentUser()).called(1);
   });
 
