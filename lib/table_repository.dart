@@ -607,7 +607,15 @@ class TableRepository {
     if (user == null) {
       throw StateError('対局中の卓を確認するにはログインが必要です。');
     }
-    return _store.findPlayingTableForUser(user.uid);
+    return findPlayingTableForUser(user.uid);
+  }
+
+  /// 認証状態から受け取った UID を使って、参加中の対局を検索する。
+  Future<TableInfo?> findPlayingTableForUser(String uid) {
+    if (uid.isEmpty) {
+      throw ArgumentError.value(uid, 'uid', 'ユーザーIDが空です。');
+    }
+    return _store.findPlayingTableForUser(uid);
   }
 
   Future<void> joinWaitingTable(String tableId) async {
