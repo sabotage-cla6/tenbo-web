@@ -60,14 +60,14 @@ class _AuthenticatedHomeGateState extends State<AuthenticatedHomeGate> {
   void initState() {
     super.initState();
     _repository = widget.repository ?? TableRepository();
-    _playingTableFuture = _repository.findPlayingTableForCurrentUser();
+    _playingTableFuture = _repository.findPlayingTableForUser(widget.uid);
   }
 
   @override
   void didUpdateWidget(covariant AuthenticatedHomeGate oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.uid != oldWidget.uid) {
-      _playingTableFuture = _repository.findPlayingTableForCurrentUser();
+      _playingTableFuture = _repository.findPlayingTableForUser(widget.uid);
     }
   }
 
