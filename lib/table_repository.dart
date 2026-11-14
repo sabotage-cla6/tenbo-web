@@ -89,7 +89,11 @@ class TableInfo {
 
 /// ログイン後に再開する対局の情報。
 class ActiveTableInfo {
-  const ActiveTableInfo({required this.table, required this.seats, required this.members});
+  const ActiveTableInfo({
+    required this.table,
+    required this.seats,
+    required this.members,
+  });
   final TableInfo table;
   final Map<String, String?> seats;
   final List<TableMember> members;
@@ -204,9 +208,12 @@ class FirestoreTableStore implements TableStore {
   Future<ActiveTableInfo?> findPlayingTableForUser(String uid) async {
     const seatFields = ['east', 'south', 'west', 'north'];
     final matches = <QueryDocumentSnapshot<Map<String, dynamic>>>[];
+
     for (final field in seatFields) {
-      final snapshot = await _firestore.collection('tables')
-          .where('seats.$field', isEqualTo: uid).get();
+      final snapshot = await _firestore
+          .collection('tables')
+          .where('seats.$field', isEqualTo: uid)
+          .get();
       for (final document in snapshot.docs) {
         if (document.data()['status'] == 'playing' &&
             !matches.any((match) => match.id == document.id)) {
@@ -214,25 +221,42 @@ class FirestoreTableStore implements TableStore {
         }
       }
     }
+
     if (matches.isEmpty) return null;
+
+    // 複数の対局に参加している場合は、最後に更新された卓を再開する。
     matches.sort((a, b) {
       final aUpdated = a.data()['updatedAt'];
       final bUpdated = b.data()['updatedAt'];
-      if (aUpdated is Timestamp && bUpdated is Timestamp) return bUpdated.compareTo(aUpdated);
+      if (aUpdated is Timestamp && bUpdated is Timestamp) {
+        return bUpdated.compareTo(aUpdated);
+      }
       return 0;
     });
+
     final document = matches.first;
     final data = document.data();
     final rawSeats = data['seats'];
     final seats = rawSeats is Map
-        ? {'東': rawSeats['east'] as String?, '南': rawSeats['south'] as String?,
-            '西': rawSeats['west'] as String?, '北': rawSeats['north'] as String?}
+        ? {
+            '東': rawSeats['east'] as String?,
+            '南': rawSeats['south'] as String?,
+            '西': rawSeats['west'] as String?,
+            '北': rawSeats['north'] as String?,
+          }
         : const <String, String?>{};
-    final memberSnapshot = await document.reference.collection('members').get();
+
+    final memberSnapshot =
+        await document.reference.collection('members').get();
     final members = memberSnapshot.docs
-        .map((member) => TableMember.fromDocument(member.id, member.data())).toList();
+        .map((member) => TableMember.fromDocument(member.id, member.data()))
+        .toList();
+
     return ActiveTableInfo(
-      table: TableInfo.fromDocument(document.id, data), seats: seats, members: members);
+      table: TableInfo.fromDocument(document.id, data),
+      seats: seats,
+      members: members,
+    );
   }
 
   @override
