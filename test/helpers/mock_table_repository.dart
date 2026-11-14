@@ -8,6 +8,13 @@ import 'package:tenbo_web/table_repository.dart';
 
 class MockTableRepository extends Mock implements TableRepository {
   @override
+  Future<ActiveTableInfo?> findPlayingTableForCurrentUser() =>
+      super.noSuchMethod(
+        Invocation.method(#findPlayingTableForCurrentUser, []),
+        returnValue: Future<ActiveTableInfo?>.value(null),
+      ) as Future<ActiveTableInfo?>;
+
+  @override
   String? get currentUserUid => super.noSuchMethod(
         Invocation.getter(#currentUserUid),
         returnValue: null,
