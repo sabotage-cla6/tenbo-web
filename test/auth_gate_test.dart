@@ -70,7 +70,7 @@ void main() {
 
     await tester.pumpWidget(MaterialApp(
       home: AuthenticatedHomeGate(
-        uid: 'south-uid',
+        uid: 'user-123',
         repository: repository,
       ),
     ));
