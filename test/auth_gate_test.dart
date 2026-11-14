@@ -48,7 +48,7 @@ void main() {
     when(repository.watchSeats('table-playing')).thenAnswer(
       (_) => Stream.value(const {
         '東': 'east-uid',
-        '南': 'south-uid',
+        '南': 'user-123',
         '西': 'west-uid',
         '北': 'north-uid',
       }),
@@ -61,7 +61,7 @@ void main() {
         kyotakuSticks: 0,
         players: {
           'east-uid': GamePlayerState(score: 25000, isRiichi: false),
-          'south-uid': GamePlayerState(score: 25000, isRiichi: false),
+          'user-123': GamePlayerState(score: 25000, isRiichi: false),
           'west-uid': GamePlayerState(score: 25000, isRiichi: false),
           'north-uid': GamePlayerState(score: 25000, isRiichi: false),
         },
