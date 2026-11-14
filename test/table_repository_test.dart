@@ -30,6 +30,13 @@ class MockTableStore extends Mock implements TableStore {
       ) as Future<TableInfo?>;
 
   @override
+  Future<ActiveTableInfo?> findPlayingTableForUser(String? uid) =>
+      super.noSuchMethod(
+        Invocation.method(#findPlayingTableForUser, [uid]),
+        returnValue: Future<ActiveTableInfo?>.value(null),
+      ) as Future<ActiveTableInfo?>;
+
+  @override
   Future<void> joinWaitingTable(
     String? tableId, {
     String? uid,
@@ -286,6 +293,42 @@ void main() {
       );
 
       verifyNever(store.findWaitingTableById(''));
+    });
+  });
+
+  group('TableRepository.findPlayingTableForCurrentUser', () {
+    test('ログイン中ユーザーのUIDで対局中の卓を検索する', () async {
+      const active = ActiveTableInfo(
+        table: TableInfo(
+          id: 'table-123',
+          name: '対局中の卓',
+          ownerName: '作成者',
+          playerCount: 4,
+          settings: {'startingPoints': 25000},
+        ),
+        seats: {'東': 'user-123', '南': 'user-2', '西': 'user-3', '北': 'user-4'},
+        members: [
+          TableMember(uid: 'user-123', displayName: 'テストユーザー', isOwner: true),
+        ],
+      );
+      when(store.findPlayingTableForUser('user-123'))
+          .thenAnswer((_) async => active);
+
+      final result = await repository.findPlayingTableForCurrentUser();
+
+      expect(result, active);
+      verify(store.findPlayingTableForUser('user-123')).called(1);
+    });
+
+    test('未ログインなら対局中の卓を検索しない', () async {
+      when(auth.currentUser).thenReturn(null);
+
+      await expectLater(
+        repository.findPlayingTableForCurrentUser(),
+        throwsA(isA<StateError>()),
+      );
+
+      verifyNever(store.findPlayingTableForUser(any));
     });
   });
 
