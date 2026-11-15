@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
-import 'table_repository.dart';\nimport 'score_request_page.dart';
+import 'table_repository.dart';
+import 'score_request_page.dart';
 
 const _ink = Color(0xFF18352E);
 const _green = Color(0xFF245447);
@@ -35,7 +36,8 @@ class InGamePage extends StatelessWidget {
   final String? currentUserUid;
   final Stream<GameState>? gameStateStream;
   final TableRepository? repository;
-  final Future<void> Function()? onRiichi;\n  final Future<void> Function({required bool isTsumo, required int ronPoints, required int dealerPayment, required int nonDealerPayment, required int yakumanMultiplier})? onScoreRequest;
+  final Future<void> Function()? onRiichi;
+  final Future<void> Function({required bool isTsumo, required int ronPoints, required int dealerPayment, required int nonDealerPayment, required int yakumanMultiplier})? onScoreRequest;
 
   TableRepository get _repository => repository ??
       (throw StateError('対局画面にはTableRepositoryの指定が必要です。'));
@@ -263,7 +265,8 @@ class InGamePage extends StatelessWidget {
                     ),
                     const SizedBox(height: 14),
                     _ActionDock(
-                      onAction: (action) => _showAction(context, action),\n                      onWin: () => _openScoreRequest(context, displayPlayers),
+                      onAction: (action) => _showAction(context, action),
+                      onWin: () => _openScoreRequest(context, displayPlayers),
                       riichiActive: selfPlayer?.isRiichi ?? false,
                       onRiichi: selfPlayer != null && (selfPlayer.isRiichi || selfPlayer.score >= 1000)
                           ? () => _toggleRiichi(context) : null,
