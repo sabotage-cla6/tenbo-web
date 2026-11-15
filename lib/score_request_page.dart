@@ -41,7 +41,7 @@ class _ScoreRequestPageState extends State<ScoreRequestPage> {
   ];
 
   String _format(int value) => value.toString().replaceAllMapped(
-    RegExp(r'\\B(?=(\\d{3})+(?!\\d))'), (_) => ',',
+    RegExp(r'\B(?=(\d{3})+(?!\d))'), (_) => ',',
   );
 
   Future<void> _submit() async {
