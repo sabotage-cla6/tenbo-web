@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'table_repository.dart';
+import 'table_repository.dart';\nimport 'score_request_page.dart';
 
 const _ink = Color(0xFF18352E);
 const _green = Color(0xFF245447);
@@ -35,7 +35,7 @@ class InGamePage extends StatelessWidget {
   final String? currentUserUid;
   final Stream<GameState>? gameStateStream;
   final TableRepository? repository;
-  final Future<void> Function()? onRiichi;
+  final Future<void> Function()? onRiichi;\n  final Future<void> Function({required bool isTsumo, required int ronPoints, required int dealerPayment, required int nonDealerPayment, required int yakumanMultiplier})? onScoreRequest;
 
   TableRepository get _repository => repository ??
       (throw StateError('対局画面にはTableRepositoryの指定が必要です。'));
@@ -54,6 +54,25 @@ class InGamePage extends StatelessWidget {
       final message = error is StateError ? error.message.toString() : 'リーチ状態の変更に失敗しました。';
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
     }
+  }
+
+  Future<void> _openScoreRequest(BuildContext context, List<GamePlayer> displayPlayers) async {
+    final uid = currentUserUid ?? (tableId == null ? null : _repository.currentUserUid);
+    if (uid == null || !displayPlayers.any((player) => player.uid == uid)) {
+      _showAction(context, '和了');
+      return;
+    }
+    if (onScoreRequest == null) {
+      _showAction(context, '和了');
+      return;
+    }
+    await Navigator.of(context).push(MaterialPageRoute<void>(
+      builder: (_) => ScoreRequestPage(
+        players: displayPlayers,
+        winnerUid: uid,
+        onRequest: onScoreRequest!,
+      ),
+    ));
   }
 
   void _showAction(BuildContext context, String action) {
@@ -244,7 +263,7 @@ class InGamePage extends StatelessWidget {
                     ),
                     const SizedBox(height: 14),
                     _ActionDock(
-                      onAction: (action) => _showAction(context, action),
+                      onAction: (action) => _showAction(context, action),\n                      onWin: () => _openScoreRequest(context, displayPlayers),
                       riichiActive: selfPlayer?.isRiichi ?? false,
                       onRiichi: selfPlayer != null && (selfPlayer.isRiichi || selfPlayer.score >= 1000)
                           ? () => _toggleRiichi(context) : null,
@@ -466,7 +485,7 @@ class _RoundPanel extends StatelessWidget {
 }
 
 class _ActionDock extends StatelessWidget {
-  const _ActionDock({required this.onAction, this.riichiActive = false, this.onRiichi});
+  const _ActionDock({required this.onAction, this.onWin, this.riichiActive = false, this.onRiichi});
 
   final ValueChanged<String> onAction;
   final bool riichiActive;
@@ -492,10 +511,10 @@ class _ActionDock extends StatelessWidget {
       children: [
         for (final action in actions)
           Material(
-            color: action.title == 'リーチ' && onRiichi == null ? Colors.grey : action.color,
+            color: (action.title == 'リーチ' && onRiichi == null) || (action.title == '和了' && onWin == null) ? Colors.grey : action.color,
             borderRadius: BorderRadius.circular(12),
             child: InkWell(
-              onTap: action.title == 'リーチ' ? onRiichi : () => onAction(action.title),
+              onTap: action.title == 'リーチ' ? onRiichi : action.title == '和了' ? onWin : () => onAction(action.title),
               borderRadius: BorderRadius.circular(12),
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
