@@ -64,7 +64,10 @@ class _ScoreRequestPageState extends State<ScoreRequestPage> {
 
   @override
   Widget build(BuildContext context) {
-    GamePlayer? winner;\n    for (final player in widget.players) {\n      if (player.uid == widget.winnerUid) winner = player;\n    }
+    GamePlayer? winner;
+    for (final player in widget.players) {
+      if (player.uid == widget.winnerUid) winner = player;
+    }
     return Scaffold(
       appBar: AppBar(title: const Text('和了点数の請求')),
       body: SafeArea(
@@ -140,7 +143,7 @@ class _ScoreRequestPageState extends State<ScoreRequestPage> {
               const SizedBox(width: 12),
               DropdownButton<int>(
                 value: _yakumanMultiplier,
-                items: [for (var i = 2; i <= 6; i++) DropdownMenuItem(value: i, child: Text('${i}倍役満'))],
+                items: [for (var i = 2; i <= 6; i++) DropdownMenuItem(value: i, child: Text('$i倍役満'))],
                 onChanged: (value) => setState(() => _yakumanMultiplier = value ?? 2),
               ),
             ]),
