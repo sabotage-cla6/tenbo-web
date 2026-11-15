@@ -488,6 +488,7 @@ class _ActionDock extends StatelessWidget {
   const _ActionDock({required this.onAction, this.onWin, this.riichiActive = false, this.onRiichi});
 
   final ValueChanged<String> onAction;
+  final VoidCallback? onWin;
   final bool riichiActive;
   final VoidCallback? onRiichi;
 
