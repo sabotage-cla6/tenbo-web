@@ -160,7 +160,7 @@ class InGamePage extends StatelessWidget {
     final roundWind = gameState?.round.wind == 'south' ? '南'
         : gameState?.round.wind == 'west' ? '西'
         : gameState?.round.wind == 'north' ? '北' : '東';
-    final displayRound = gameState == null ? round : '${roundWind}${gameState.round.number}局';
+    final displayRound = gameState == null ? round : '$roundWind${gameState.round.number}局';
     final displayHonba = gameState?.round.honba ?? honba;
     final displayKyotaku = gameState == null ? kyotaku : gameState.kyotakuSticks * 1000;
     final selfUid = currentUserUid ?? (tableId == null ? null : _repository.currentUserUid);
@@ -412,7 +412,7 @@ class _PlayerPanel extends StatelessWidget {
                 style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900)),
           ),
           Text(
-            ${diff >= 0 ? '+' : ''}${_format(diff)},
+            '${diff >= 0 ? '+' : ''}${_format(diff)}',
             style: TextStyle(
               color: diff >= 0 ? const Color(0xFF73D69A) : const Color(0xFFFF9992),
               fontSize: 10,
