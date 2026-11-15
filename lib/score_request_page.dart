@@ -64,7 +64,7 @@ class _ScoreRequestPageState extends State<ScoreRequestPage> {
 
   @override
   Widget build(BuildContext context) {
-    final winner = widget.players.where((p) => p.uid == widget.winnerUid).firstOrNull;
+    GamePlayer? winner;\n    for (final player in widget.players) {\n      if (player.uid == widget.winnerUid) winner = player;\n    }
     return Scaffold(
       appBar: AppBar(title: const Text('和了点数の請求')),
       body: SafeArea(
@@ -72,6 +72,21 @@ class _ScoreRequestPageState extends State<ScoreRequestPage> {
           padding: const EdgeInsets.all(16),
           children: [
             Text('和了者：${winner?.name ?? '不明'}', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 10),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(10),
+                child: Wrap(
+                  spacing: 12,
+                  runSpacing: 8,
+                  children: [
+                    for (final player in widget.players)
+                      Text('${player.wind} ${player.name}  ${_format(player.score)}点',
+                        style: TextStyle(fontWeight: player.uid == widget.winnerUid ? FontWeight.bold : FontWeight.normal)),
+                  ],
+                ),
+              ),
+            ),
             const SizedBox(height: 12),
             SegmentedButton<bool>(
               segments: const [
