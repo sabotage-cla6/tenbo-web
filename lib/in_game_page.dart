@@ -160,7 +160,7 @@ class InGamePage extends StatelessWidget {
     final roundWind = gameState?.round.wind == 'south' ? '南'
         : gameState?.round.wind == 'west' ? '西'
         : gameState?.round.wind == 'north' ? '北' : '東';
-    final displayRound = gameState == null ? round : '$roundWind' + gameState.round.number.toString() + '局';
+    final displayRound = gameState == null ? round : '${roundWind}${gameState.round.number}局';
     final displayHonba = gameState?.round.honba ?? honba;
     final displayKyotaku = gameState == null ? kyotaku : gameState.kyotakuSticks * 1000;
     final selfUid = currentUserUid ?? (tableId == null ? null : _repository.currentUserUid);
@@ -339,7 +339,7 @@ class _GameInfoBar extends StatelessWidget {
                   Text(tableName, maxLines: 1, overflow: TextOverflow.ellipsis,
                       style: const TextStyle(color: _ink, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 3),
-                  Text($round  •  配点 ${_format(startingPoints)}点,
+                  Text('$round  •  配点 ${_format(startingPoints)}点',
                       style: const TextStyle(color: Colors.black54, fontSize: 12)),
                 ],
               ),
@@ -475,13 +475,13 @@ class _RoundPanel extends StatelessWidget {
               child: Text(round, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900)),
             ),
             const SizedBox(height: 4),
-            Text($honba 本場,
+            Text('$honba 本場',
                 style: const TextStyle(color: Color(0xFFF1C978), fontSize: 11, fontWeight: FontWeight.bold)),
             const SizedBox(height: 7),
             const Icon(Icons.horizontal_rule, color: Colors.white, size: 20),
             const SizedBox(height: 2),
             const Text('供託', style: TextStyle(color: Colors.white60, fontSize: 9)),
-            Text(_format(kyotaku) + '点',
+            Text('${_format(kyotaku)}点',
                 style: const TextStyle(color: Color(0xFFF1C978), fontSize: 12, fontWeight: FontWeight.bold)),
           ],
         ),
