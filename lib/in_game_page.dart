@@ -23,6 +23,7 @@ class InGamePage extends StatelessWidget {
     this.gameStateStream,
     this.repository,
     this.onRiichi,
+    this.onScoreRequest,
     super.key,
   });
 
@@ -79,7 +80,7 @@ class InGamePage extends StatelessWidget {
 
   void _showAction(BuildContext context, String action) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(action + '機能は今後実装します。')),
+      SnackBar(content: Text('$action機能は今後実装します。')),
     );
   }
 
@@ -338,7 +339,7 @@ class _GameInfoBar extends StatelessWidget {
                   Text(tableName, maxLines: 1, overflow: TextOverflow.ellipsis,
                       style: const TextStyle(color: _ink, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 3),
-                  Text(round + '  •  配点 ' + _format(startingPoints) + '点',
+                  Text($round  •  配点 ${_format(startingPoints)}点,
                       style: const TextStyle(color: Colors.black54, fontSize: 12)),
                 ],
               ),
@@ -411,7 +412,7 @@ class _PlayerPanel extends StatelessWidget {
                 style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900)),
           ),
           Text(
-            (diff >= 0 ? '+' : '') + _format(diff),
+            ${diff >= 0 ? '+' : ''}${_format(diff)},
             style: TextStyle(
               color: diff >= 0 ? const Color(0xFF73D69A) : const Color(0xFFFF9992),
               fontSize: 10,
@@ -474,7 +475,7 @@ class _RoundPanel extends StatelessWidget {
               child: Text(round, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900)),
             ),
             const SizedBox(height: 4),
-            Text(honba.toString() + ' 本場',
+            Text($honba 本場,
                 style: const TextStyle(color: Color(0xFFF1C978), fontSize: 11, fontWeight: FontWeight.bold)),
             const SizedBox(height: 7),
             const Icon(Icons.horizontal_rule, color: Colors.white, size: 20),
