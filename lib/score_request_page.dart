@@ -199,24 +199,6 @@ class _ScoreRequestPageState extends State<ScoreRequestPage> {
         onTap: () => _isTsumo ? _selectTsumo(two!) : _selectRon(row.ronTwo!),
       ));
     }
-    final row70 = _fuRows.last;
-    cells.add(_pointCell(label: row70.label, selected: false, onTap: null, emphasized: true));
-    final one70 = row70.tsumoOne;
-    final two70 = row70.tsumoTwo;
-    cells.add(_pointCell(
-      label: _isTsumo ? '${_format(one70!.$1)} / ${_format(one70.$2)}' : '${_format(row70.ronOne!)}点',
-      selected: _isTsumo
-          ? _dealerPayment == one70!.$2 && _nonDealerPayment == one70.$1
-          : _ronPoints == row70.ronOne,
-      onTap: () => _isTsumo ? _selectTsumo(one70!) : _selectRon(row70.ronOne!),
-    ));
-    cells.add(_pointCell(
-      label: _isTsumo ? '${_format(two70!.$1)} / ${_format(two70.$2)}' : '${_format(row70.ronTwo!)}点',
-      selected: _isTsumo
-          ? _dealerPayment == two70!.$2 && _nonDealerPayment == two70.$1
-          : _ronPoints == row70.ronTwo,
-      onTap: () => _isTsumo ? _selectTsumo(two70!) : _selectRon(row70.ronTwo!),
-    ));
     return _grid(cells, 3);
   }
 
@@ -246,6 +228,29 @@ class _ScoreRequestPageState extends State<ScoreRequestPage> {
           emphasized: true,
         ),
     ], 3, ratio: 1.7);
+  }
+
+  Widget _buildSeventyFuGrid() {
+    final row = _fuRows.last;
+    final one = row.tsumoOne;
+    final two = row.tsumoTwo;
+    return _grid([
+      _pointCell(label: row.label, selected: false, onTap: null, emphasized: true),
+      _pointCell(
+        label: _isTsumo ? '${_format(one!.$1)} / ${_format(one.$2)}' : '${_format(row.ronOne!)}点',
+        selected: _isTsumo
+            ? _dealerPayment == one!.$2 && _nonDealerPayment == one.$1
+            : _ronPoints == row.ronOne,
+        onTap: () => _isTsumo ? _selectTsumo(one!) : _selectRon(row.ronOne!),
+      ),
+      _pointCell(
+        label: _isTsumo ? '${_format(two!.$1)} / ${_format(two.$2)}' : '${_format(row.ronTwo!)}点',
+        selected: _isTsumo
+            ? _dealerPayment == two!.$2 && _nonDealerPayment == two.$1
+            : _ronPoints == row.ronTwo,
+        onTap: () => _isTsumo ? _selectTsumo(two!) : _selectRon(row.ronTwo!),
+      ),
+    ], 3);
   }
 
   Widget _buildHighFuGrid() {
@@ -397,6 +402,9 @@ class _ScoreRequestPageState extends State<ScoreRequestPage> {
                         const SizedBox(height: 8),
                         _buildYakumanGrid(),
                         const SizedBox(height: 8),
+                        _buildSeventyFuGrid(),
+                        const SizedBox(height: 12),
+                        const SizedBox(height: 12),
                         _buildHighFuGrid(),
                       ],
                     ),
