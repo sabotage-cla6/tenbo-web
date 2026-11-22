@@ -65,15 +65,19 @@ class InGamePage extends StatelessWidget {
       _showAction(context, '和了');
       return;
     }
-    if (onScoreRequest == null) {
-      _showAction(context, '和了');
-      return;
-    }
     await Navigator.of(context).push(MaterialPageRoute<void>(
       builder: (_) => ScoreRequestPage(
         players: displayPlayers,
         winnerUid: uid,
-        onRequest: onScoreRequest!,
+        onRequest: onScoreRequest ?? ({
+          required bool isTsumo,
+          required int ronPoints,
+          required int dealerPayment,
+          required int nonDealerPayment,
+          required int yakumanMultiplier,
+        }) async {
+          _showAction(context, '点数請求の保存');
+        },
       ),
     ));
   }
