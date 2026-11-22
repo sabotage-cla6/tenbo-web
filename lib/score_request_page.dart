@@ -71,9 +71,12 @@ class _ScoreRequestPageState extends State<ScoreRequestPage> {
     return Scaffold(
       appBar: AppBar(title: const Text('和了点数の請求')),
       body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(16),
+        child: Column(
           children: [
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
             Text('和了者：${winner?.name ?? '不明'}', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 10),
             Card(
@@ -147,11 +150,19 @@ class _ScoreRequestPageState extends State<ScoreRequestPage> {
                 onChanged: (value) => setState(() => _yakumanMultiplier = value ?? 2),
               ),
             ]),
-            const SizedBox(height: 24),
-            FilledButton(
-              onPressed: _submitting || (_isTsumo ? _dealerPayment == null : _ronPoints == null)
-                  ? null : _submit,
-              child: Text(_submitting ? '請求中…' : '支払いを依頼する'),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+              child: SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: _submitting || (_isTsumo ? _dealerPayment == null : _ronPoints == null)
+                      ? null : _submit,
+                  child: Text(_submitting ? '請求中…' : '支払いを依頼する'),
+                ),
+              ),
             ),
           ],
         ),
