@@ -31,11 +31,6 @@ void main() {
       scrollable: find.byType(Scrollable).first,
     );
     await tester.tap(find.text('3,900点'));
-    await tester.scrollUntilVisible(
-      find.text('支払いを依頼する'),
-      250,
-      scrollable: find.byType(Scrollable).first,
-    );
     await tester.tap(find.text('支払いを依頼する'));
     await tester.pumpAndSettle();
     expect(requested?['isTsumo'], false);
@@ -64,11 +59,6 @@ void main() {
       scrollable: find.byType(Scrollable).first,
     );
     await tester.tap(find.text('300 / 500'));
-    await tester.scrollUntilVisible(
-      find.text('支払いを依頼する'),
-      250,
-      scrollable: find.byType(Scrollable).first,
-    );
     await tester.tap(find.text('支払いを依頼する'));
     await tester.pumpAndSettle();
     expect(requested?['isTsumo'], true);
