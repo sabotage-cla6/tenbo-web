@@ -33,7 +33,11 @@ class _ScoreRequestPageState extends State<ScoreRequestPage> {
   int _yakumanMultiplier = 2;
   bool _submitting = false;
 
-  static const _ronChoices = <int>[1300, 2600, 5200, 1000, 2000, 3900, 7700, 8000, 12000, 16000, 24000, 32000];
+  static const _ronChoiceGroups = <(String, List<int>)>[
+    ('20符', [1300, 2600, 5200]),
+    ('30符', [1000, 2000, 3900, 7700]),
+    ('50符', [8000, 12000, 16000, 24000, 32000]),
+  ];
   static const _tsumoChoices = <(int, int)>[
     (300, 500), (400, 700), (500, 1000), (700, 1300),
     (800, 1600), (1000, 2000), (1300, 2600), (1600, 3200),
@@ -111,14 +115,24 @@ class _ScoreRequestPageState extends State<ScoreRequestPage> {
             if (!_isTsumo) ...[
               const Text('放銃者からの支払い点数', style: TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
-              Wrap(spacing: 8, runSpacing: 8, children: [
-                for (final points in _ronChoices)
-                  ChoiceChip(
-                    label: Text('${_format(points)}点'),
-                    selected: _ronPoints == points,
-                    onSelected: (_) => setState(() => _ronPoints = points),
-                  ),
-              ]),
+              for (final group in _ronChoiceGroups) ...[
+                Padding(
+                  padding: const EdgeInsets.only(top: 8, bottom: 4),
+                  child: Text(group.$1, style: Theme.of(context).textTheme.labelLarge),
+                ),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final points in group.$2)
+                      ChoiceChip(
+                        label: Text('${_format(points)}点'),
+                        selected: _ronPoints == points,
+                        onSelected: (_) => setState(() => _ronPoints = points),
+                      ),
+                  ],
+                ),
+              ],
             ] else ...[
               const Text('親・子の支払い点数', style: TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
