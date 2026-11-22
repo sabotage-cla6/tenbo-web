@@ -255,11 +255,10 @@ class _ScoreRequestPageState extends State<ScoreRequestPage> {
     ];
     return _grid([
       for (final row in rows) ...[
-        _pointCell(label: row.label, selected: false, onTap: null, emphasized: true),
         _pointCell(
           label: _isTsumo
-              ? '${_format(row.tsumoOne.$1)} / ${_format(row.tsumoOne.$2)}'
-              : '${_format(row.ronOne)}点',
+              ? '\${row.label} \${_format(row.tsumoOne.$1)} / \${_format(row.tsumoOne.$2)}'
+              : '\${row.label} \${_format(row.ronOne)}点',
           selected: _isTsumo
               ? _dealerPayment == row.tsumoOne.$2 && _nonDealerPayment == row.tsumoOne.$1
               : _ronPoints == row.ronOne,
@@ -269,8 +268,8 @@ class _ScoreRequestPageState extends State<ScoreRequestPage> {
         ),
         _pointCell(
           label: _isTsumo
-              ? '${_format(row.tsumoTwo.$1)} / ${_format(row.tsumoTwo.$2)}'
-              : '${_format(row.ronTwo)}点',
+              ? '\${row.label} \${_format(row.tsumoTwo.$1)} / \${_format(row.tsumoTwo.$2)}'
+              : '\${row.label} \${_format(row.ronTwo)}点',
           selected: _isTsumo
               ? _dealerPayment == row.tsumoTwo.$2 && _nonDealerPayment == row.tsumoTwo.$1
               : _ronPoints == row.ronTwo,
@@ -279,7 +278,7 @@ class _ScoreRequestPageState extends State<ScoreRequestPage> {
               : _selectRon(row.ronTwo),
         ),
       ],
-    ], 3);
+    ], 4, ratio: 1.5);
   }
 
   Future<void> _submit() async {
@@ -396,8 +395,7 @@ class _ScoreRequestPageState extends State<ScoreRequestPage> {
                         _buildYakumanGrid(),
                         const SizedBox(height: 8),
                         _buildSeventyFuGrid(),
-                        const SizedBox(height: 12),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 48),
                         _buildHighFuGrid(),
                       ],
                     ),
