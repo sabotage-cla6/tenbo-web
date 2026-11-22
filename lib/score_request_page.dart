@@ -175,19 +175,19 @@ class _ScoreRequestPageState extends State<ScoreRequestPage> {
           ? const SizedBox.shrink()
           : _pointCell(
               label: _isTsumo
-                  ? '${_format(one!.$1)} / ${_format(one.$2)}'
+                  ? '${_format(one!.$1)} / ${_format(one!.$2)}'
                   : '${_format(row.ronOne!)}点',
               selected: _isTsumo
-                  ? _dealerPayment == one!.$2 && _nonDealerPayment == one.$1
+                  ? _dealerPayment == one!.$2 && _nonDealerPayment == one!.$1
                   : _ronPoints == row.ronOne,
               onTap: () => _isTsumo ? _selectTsumo(one!) : _selectRon(row.ronOne!),
             ));
       cells.add(_pointCell(
         label: _isTsumo
-            ? '${_format(two!.$1)} / ${_format(two.$2)}'
+            ? '${_format(two!.$1)} / ${_format(two!.$2)}'
             : '${_format(row.ronTwo!)}点',
         selected: _isTsumo
-            ? _dealerPayment == two!.$2 && _nonDealerPayment == two.$1
+            ? _dealerPayment == two!.$2 && _nonDealerPayment == two!.$1
             : _ronPoints == row.ronTwo,
         onTap: () => _isTsumo ? _selectTsumo(two!) : _selectRon(row.ronTwo!),
       ));
@@ -230,16 +230,16 @@ class _ScoreRequestPageState extends State<ScoreRequestPage> {
     return _grid([
       _pointCell(label: row.label, selected: false, onTap: null, emphasized: true),
       _pointCell(
-        label: _isTsumo ? '${_format(one!.$1)} / ${_format(one.$2)}' : '${_format(row.ronOne!)}点',
+        label: _isTsumo ? '${_format(one!.$1)} / ${_format(one!.$2)}' : '${_format(row.ronOne!)}点',
         selected: _isTsumo
-            ? _dealerPayment == one!.$2 && _nonDealerPayment == one.$1
+            ? _dealerPayment == one!.$2 && _nonDealerPayment == one!.$1
             : _ronPoints == row.ronOne,
         onTap: () => _isTsumo ? _selectTsumo(one!) : _selectRon(row.ronOne!),
       ),
       _pointCell(
-        label: _isTsumo ? '${_format(two!.$1)} / ${_format(two.$2)}' : '${_format(row.ronTwo!)}点',
+        label: _isTsumo ? '${_format(two!.$1)} / ${_format(two!.$2)}' : '${_format(row.ronTwo!)}点',
         selected: _isTsumo
-            ? _dealerPayment == two!.$2 && _nonDealerPayment == two.$1
+            ? _dealerPayment == two!.$2 && _nonDealerPayment == two!.$1
             : _ronPoints == row.ronTwo,
         onTap: () => _isTsumo ? _selectTsumo(two!) : _selectRon(row.ronTwo!),
       ),
