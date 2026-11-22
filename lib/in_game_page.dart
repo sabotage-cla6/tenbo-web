@@ -59,33 +59,6 @@ class InGamePage extends StatelessWidget {
     }
   }
 
-  Future<void> _openScoreRequest(BuildContext context, List<GamePlayer> displayPlayers, {required String currentRound, required int currentHonba}) async {
-    final uid = currentUserUid ?? (tableId == null ? null : _repository.currentUserUid);
-    if (uid == null || !displayPlayers.any((player) => player.uid == uid)) {
-      _showAction(context, '和了');
-      return;
-    }
-    await Navigator.of(context).push(MaterialPageRoute<void>(
-      builder: (_) => ScoreRequestPage(
-        players: displayPlayers,
-        winnerUid: uid,
-        startingPoints: startingPoints,
-        round: currentRound,
-        honba: currentHonba,
-        onRequest: onScoreRequest ?? ({
-          required bool isTsumo,
-          required int ronPoints,
-          required int dealerPayment,
-          required int nonDealerPayment,
-          required int yakumanMultiplier,
-          required int honba,
-        }) async {
-          _showAction(context, '点数請求の保存');
-        },
-      ),
-    ));
-  }
-
   void _showAction(BuildContext context, String action) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('$action機能は今後実装します。')),
@@ -275,7 +248,32 @@ class InGamePage extends StatelessWidget {
                     const SizedBox(height: 14),
                     _ActionDock(
                       onAction: (action) => _showAction(context, action),
-                      onWin: () => _openScoreRequest(context, displayPlayers, currentRound: displayRound, currentHonba: displayHonba),
+                      onWin: selfPlayer == null ? () => _showAction(context, '和了') : null,
+                      scoreRequestBuilder: selfPlayer == null
+                          ? null
+                          : ({required onCancel, required onComplete}) => SizedBox(
+                              height: 700,
+                              child: ScoreRequestPage(
+                                players: displayPlayers,
+                                winnerUid: selfPlayer.uid!,
+                                startingPoints: startingPoints,
+                                round: displayRound,
+                                honba: displayHonba,
+                                embedded: true,
+                                onCancel: onCancel,
+                                onComplete: onComplete,
+                                onRequest: onScoreRequest ?? ({
+                                  required bool isTsumo,
+                                  required int ronPoints,
+                                  required int dealerPayment,
+                                  required int nonDealerPayment,
+                                  required int yakumanMultiplier,
+                                  required int honba,
+                                }) async {
+                                  _showAction(context, '点数請求の保存');
+                                },
+                              ),
+                            ),
                       riichiActive: selfPlayer?.isRiichi ?? false,
                       onRiichi: selfPlayer != null && (selfPlayer.isRiichi || selfPlayer.score >= 1000)
                           ? () => _toggleRiichi(context) : null,
@@ -496,16 +494,40 @@ class _RoundPanel extends StatelessWidget {
       );
 }
 
-class _ActionDock extends StatelessWidget {
-  const _ActionDock({required this.onAction, this.onWin, this.riichiActive = false, this.onRiichi});
+class _ActionDock extends StatefulWidget {
+  const _ActionDock({
+    required this.onAction,
+    this.onWin,
+    this.scoreRequestBuilder,
+    this.riichiActive = false,
+    this.onRiichi,
+  });
 
   final ValueChanged<String> onAction;
   final VoidCallback? onWin;
+  final Widget Function({
+    required VoidCallback onCancel,
+    required VoidCallback onComplete,
+  })? scoreRequestBuilder;
   final bool riichiActive;
   final VoidCallback? onRiichi;
 
   @override
+  State<_ActionDock> createState() => _ActionDockState();
+}
+
+class _ActionDockState extends State<_ActionDock> {
+  bool _showScoreRequest = false;
+
+  @override
   Widget build(BuildContext context) {
+    if (_showScoreRequest && widget.scoreRequestBuilder != null) {
+      return widget.scoreRequestBuilder!(
+        onCancel: () => setState(() => _showScoreRequest = false),
+        onComplete: () => setState(() => _showScoreRequest = false),
+      );
+    }
+
     const actions = [
       _ActionItem('リーチ', '1,000点供託', Icons.bolt, Color(0xFFB97719)),
       _ActionItem('和了', '和了点請求', Icons.sports_martial_arts, Color(0xFFB9443D)),
@@ -524,10 +546,19 @@ class _ActionDock extends StatelessWidget {
       children: [
         for (final action in actions)
           Material(
-            color: (action.title == 'リーチ' && onRiichi == null) || (action.title == '和了' && onWin == null) ? Colors.grey : action.color,
+            color: (action.title == 'リーチ' && widget.onRiichi == null) ||
+                    (action.title == '和了' && widget.onWin == null && widget.scoreRequestBuilder == null)
+                ? Colors.grey
+                : action.color,
             borderRadius: BorderRadius.circular(12),
             child: InkWell(
-              onTap: action.title == 'リーチ' ? onRiichi : action.title == '和了' ? onWin : () => onAction(action.title),
+              onTap: action.title == 'リーチ'
+                  ? widget.onRiichi
+                  : action.title == '和了'
+                      ? widget.scoreRequestBuilder != null
+                          ? () => setState(() => _showScoreRequest = true)
+                          : widget.onWin
+                      : () => widget.onAction(action.title),
               borderRadius: BorderRadius.circular(12),
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
@@ -538,11 +569,12 @@ class _ActionDock extends StatelessWidget {
                     const SizedBox(height: 3),
                     Text(action.title, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
                     Text(
-                        action.title == 'リーチ' && riichiActive
-                            ? 'もう一度押して解除'
-                            : action.subtitle,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(color: Colors.white70, fontSize: 9)),
+                      action.title == 'リーチ' && widget.riichiActive
+                          ? 'もう一度押して解除'
+                          : action.subtitle,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.white70, fontSize: 9),
+                    ),
                   ],
                 ),
               ),
