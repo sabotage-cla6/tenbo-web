@@ -257,8 +257,8 @@ class _ScoreRequestPageState extends State<ScoreRequestPage> {
       for (final row in rows) ...[
         _pointCell(
           label: _isTsumo
-              ? '${row.label} \${_format(row.tsumoOne.$1)} / \${_format(row.tsumoOne.$2)}'
-              : '${row.label} \${_format(row.ronOne)}点',
+              ? '${row.label} ${_format(row.tsumoOne.$1)} / ${_format(row.tsumoOne.$2)}'
+              : '${row.label} ${_format(row.ronOne)}点',
           selected: _isTsumo
               ? _dealerPayment == row.tsumoOne.$2 && _nonDealerPayment == row.tsumoOne.$1
               : _ronPoints == row.ronOne,
@@ -268,8 +268,8 @@ class _ScoreRequestPageState extends State<ScoreRequestPage> {
         ),
         _pointCell(
           label: _isTsumo
-              ? '${row.label} \${_format(row.tsumoTwo.$1)} / \${_format(row.tsumoTwo.$2)}'
-              : '${row.label} \${_format(row.ronTwo)}点',
+              ? '${row.label} ${_format(row.tsumoTwo.$1)} / ${_format(row.tsumoTwo.$2)}'
+              : '${row.label} ${_format(row.ronTwo)}点',
           selected: _isTsumo
               ? _dealerPayment == row.tsumoTwo.$2 && _nonDealerPayment == row.tsumoTwo.$1
               : _ronPoints == row.ronTwo,
