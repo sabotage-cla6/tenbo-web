@@ -109,7 +109,7 @@ void main() {
       players: players,
       winnerUid: 'winner',
       onRequest: ({required isTsumo, required ronPoints, required dealerPayment,
-        required nonDealerPayment, required yakumanMultiplier}) async {
+        required nonDealerPayment, required yakumanMultiplier, required honba}) async {
         requested = {
           'isTsumo': isTsumo,
           'ronPoints': ronPoints,
@@ -128,7 +128,7 @@ void main() {
     await tester.tap(yakumanChoice);
     await tester.pump();
 
-    final submit = find.text('支払いを依頼する');
+    final submit = find.text('点数請求');
     await tester.ensureVisible(submit);
     await tester.tap(submit);
     await tester.pumpAndSettle();
