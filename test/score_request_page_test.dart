@@ -28,10 +28,22 @@ void main() {
     await tester.scrollUntilVisible(
       find.text('3,900点'),
       250,
-      scrollable: find.byType(Scrollable).first,
+      scrollable: find.byType(ListView),
     );
-    await tester.tap(find.text('3,900点'));
-    await tester.tap(find.text('支払いを依頼する'));
+    final ronChoice = find.ancestor(
+      of: find.text('3,900点'),
+      matching: find.byType(ChoiceChip),
+    );
+    await tester.tap(ronChoice);
+    await tester.pump();
+    expect(tester.widget<ChoiceChip>(ronChoice).selected, isTrue);
+    final submitButton = find.ancestor(
+      of: find.text('支払いを依頼する'),
+      matching: find.byType(FilledButton),
+    );
+    expect(tester.widget<FilledButton>(submitButton).onPressed, isNotNull);
+    await tester.tap(submitButton);
+    await tester.pumpAndSettle();
     await tester.pumpAndSettle();
     expect(requested?['isTsumo'], false);
     expect(requested?['ronPoints'], 3900);
@@ -56,10 +68,22 @@ void main() {
     await tester.scrollUntilVisible(
       find.text('300 / 500'),
       250,
-      scrollable: find.byType(Scrollable).first,
+      scrollable: find.byType(ListView),
     );
-    await tester.tap(find.text('300 / 500'));
-    await tester.tap(find.text('支払いを依頼する'));
+    final tsumoChoice = find.ancestor(
+      of: find.text('300 / 500'),
+      matching: find.byType(ChoiceChip),
+    );
+    await tester.tap(tsumoChoice);
+    await tester.pump();
+    expect(tester.widget<ChoiceChip>(tsumoChoice).selected, isTrue);
+    final submitButton = find.ancestor(
+      of: find.text('支払いを依頼する'),
+      matching: find.byType(FilledButton),
+    );
+    expect(tester.widget<FilledButton>(submitButton).onPressed, isNotNull);
+    await tester.tap(submitButton);
+    await tester.pumpAndSettle();
     await tester.pumpAndSettle();
     expect(requested?['isTsumo'], true);
     expect(requested?['dealerPayment'], 500);
