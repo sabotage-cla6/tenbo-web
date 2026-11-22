@@ -38,7 +38,7 @@ class InGamePage extends StatelessWidget {
   final Stream<GameState>? gameStateStream;
   final TableRepository? repository;
   final Future<void> Function()? onRiichi;
-  final Future<void> Function({required bool isTsumo, required int ronPoints, required int dealerPayment, required int nonDealerPayment, required int yakumanMultiplier})? onScoreRequest;
+  final Future<void> Function({required bool isTsumo, required int ronPoints, required int dealerPayment, required int nonDealerPayment, required int yakumanMultiplier, required int honba})? onScoreRequest;
 
   TableRepository get _repository => repository ??
       (throw StateError('対局画面にはTableRepositoryの指定が必要です。'));
@@ -59,7 +59,7 @@ class InGamePage extends StatelessWidget {
     }
   }
 
-  Future<void> _openScoreRequest(BuildContext context, List<GamePlayer> displayPlayers) async {
+  Future<void> _openScoreRequest(BuildContext context, List<GamePlayer> displayPlayers, {required String currentRound, required int currentHonba}) async {
     final uid = currentUserUid ?? (tableId == null ? null : _repository.currentUserUid);
     if (uid == null || !displayPlayers.any((player) => player.uid == uid)) {
       _showAction(context, '和了');
@@ -70,12 +70,15 @@ class InGamePage extends StatelessWidget {
         players: displayPlayers,
         winnerUid: uid,
         startingPoints: startingPoints,
+        round: currentRound,
+        honba: currentHonba,
         onRequest: onScoreRequest ?? ({
           required bool isTsumo,
           required int ronPoints,
           required int dealerPayment,
           required int nonDealerPayment,
           required int yakumanMultiplier,
+          required int honba,
         }) async {
           _showAction(context, '点数請求の保存');
         },
@@ -272,7 +275,7 @@ class InGamePage extends StatelessWidget {
                     const SizedBox(height: 14),
                     _ActionDock(
                       onAction: (action) => _showAction(context, action),
-                      onWin: () => _openScoreRequest(context, displayPlayers),
+                      onWin: () => _openScoreRequest(context, displayPlayers, currentRound: displayRound, currentHonba: displayHonba),
                       riichiActive: selfPlayer?.isRiichi ?? false,
                       onRiichi: selfPlayer != null && (selfPlayer.isRiichi || selfPlayer.score >= 1000)
                           ? () => _toggleRiichi(context) : null,
