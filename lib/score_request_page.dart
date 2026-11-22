@@ -13,11 +13,13 @@ class ScoreRequestPage extends StatefulWidget {
     required this.players,
     required this.winnerUid,
     required this.onRequest,
+    this.startingPoints = 25000,
     super.key,
   });
 
   final List<GamePlayer> players;
   final String winnerUid;
+  final int startingPoints;
   final Future<void> Function({
     required bool isTsumo,
     required int ronPoints,
@@ -343,6 +345,7 @@ class _ScoreRequestPageState extends State<ScoreRequestPage> {
                           _ScorePlayerPanel(
                             player: player,
                             isWinner: player.uid == widget.winnerUid,
+                            startingPoints: widget.startingPoints,
                           ),
                       ],
                     ),
@@ -434,17 +437,24 @@ class _ScoreRequestPageState extends State<ScoreRequestPage> {
 }
 
 class _ScorePlayerPanel extends StatelessWidget {
-  const _ScorePlayerPanel({required this.player, required this.isWinner});
+  const _ScorePlayerPanel({
+    required this.player,
+    required this.isWinner,
+    required this.startingPoints,
+  });
 
   final GamePlayer player;
   final bool isWinner;
+  final int startingPoints;
 
   String _format(int value) => value.toString().replaceAllMapped(
     RegExp(r'\B(?=(\d{3})+(?!\d))'), (_) => ',',
   );
 
   @override
-  Widget build(BuildContext context) => Container(
+  Widget build(BuildContext context) {
+    final diff = player.score - startingPoints;
+    return Container(
     padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 5),
     decoration: BoxDecoration(
       color: const Color(0xE6193828),
@@ -463,8 +473,18 @@ class _ScorePlayerPanel extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(player.wind,
-                style: const TextStyle(color: _scoreGold, fontWeight: FontWeight.bold)),
+            Container(
+              width: 20,
+              height: 20,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: player.isDealer ? const Color(0xFFE39A4A) : Colors.white24,
+                borderRadius: BorderRadius.circular(5),
+              ),
+              child: Text(player.wind,
+                  style: const TextStyle(color: Colors.white, fontSize: 11,
+                      fontWeight: FontWeight.bold)),
+            ),
             const SizedBox(width: 5),
             Flexible(
               child: Text(player.name, maxLines: 1, overflow: TextOverflow.ellipsis,
@@ -480,9 +500,46 @@ class _ScorePlayerPanel extends StatelessWidget {
               style: const TextStyle(color: Colors.white, fontSize: 17,
                   fontWeight: FontWeight.w900)),
         ),
-        if (isWinner)
-          const Text('和了者', style: TextStyle(color: _scoreGold, fontSize: 9)),
+        Text(
+          '${diff >= 0 ? '+' : ''}${_format(diff)}',
+          style: TextStyle(
+            color: diff >= 0 ? const Color(0xFF73D69A) : const Color(0xFFFF9992),
+            fontSize: 10,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 3),
+        Wrap(
+          alignment: WrapAlignment.center,
+          spacing: 3,
+          children: [
+            if (player.isRiichi)
+              const _ScoreStatusTag(label: '⚡ 立直', color: Color(0xFFB93B35)),
+            if (player.isYakitori)
+              const _ScoreStatusTag(label: '🍢 焼き鳥', color: Color(0xFFB85B2C)),
+            if (player.isDealer)
+              const _ScoreStatusTag(label: '親', color: Color(0xFFB86D2D)),
+            if (isWinner)
+              const _ScoreStatusTag(label: '和了者', color: Color(0xFF47765A)),
+          ],
+        ),
       ],
     ),
+  );
+  }
+}
+
+class _ScoreStatusTag extends StatelessWidget {
+  const _ScoreStatusTag({required this.label, required this.color});
+
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+    decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(6)),
+    child: Text(label, style: const TextStyle(color: Colors.white, fontSize: 8,
+        fontWeight: FontWeight.bold)),
   );
 }
