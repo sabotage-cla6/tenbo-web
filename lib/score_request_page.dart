@@ -39,14 +39,7 @@ class _ScoreRequestPageState extends State<ScoreRequestPage> {
   bool _submitting = false;
 
   String? get _selectedKey {
-    if (_yakumanMultiplier != 2 || _ronPoints == 32000 ||
-        (_dealerPayment == 16000 && _nonDealerPayment == 8000)) {
-      if (_yakumanMultiplier == 1 || _yakumanMultiplier == 2 ||
-          _yakumanMultiplier == 4) {
-        // The selected multiplier is represented by the yakuman row.
-        if (_selectedYakuman) return 'yakuman-$_yakumanMultiplier';
-      }
-    }
+    if (_selectedYakuman) return 'yakuman-$_yakumanMultiplier';
     if (_isTsumo) {
       if (_dealerPayment == null || _nonDealerPayment == null) return null;
       return 'tsumo-$_nonDealerPayment-$_dealerPayment';
@@ -85,7 +78,7 @@ class _ScoreRequestPageState extends State<ScoreRequestPage> {
   ];
 
   String _format(int value) => value.toString().replaceAllMapped(
-    RegExp(r'\\B(?=(\\d{3})+(?!\\d))'), (_) => ',',
+    RegExp(r'\B(?=(\d{3})+(?!\d))'), (_) => ',',
   );
 
   void _selectRon(int points) {
@@ -449,7 +442,7 @@ class _ScorePlayerPanel extends StatelessWidget {
   final bool isWinner;
 
   String _format(int value) => value.toString().replaceAllMapped(
-    RegExp(r'\\B(?=(\\d{3})+(?!\\d))'), (_) => ',',
+    RegExp(r'\B(?=(\d{3})+(?!\d))'), (_) => ',',
   );
 
   @override
