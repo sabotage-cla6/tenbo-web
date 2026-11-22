@@ -29,7 +29,7 @@ void main() {
     )));
 
     expect(find.text('東'), findsOneWidget);
-    expect(find.text('和了者'), findsNWidgets(2));
+    expect(find.text('和了者'), findsOneWidget);
     expect(find.text('25,000点'), findsOneWidget);
     expect(find.text('20符'), findsOneWidget);
     expect(find.text('30符'), findsOneWidget);
