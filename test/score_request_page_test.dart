@@ -95,6 +95,11 @@ void main() {
       onRequest: ({required isTsumo, required ronPoints, required dealerPayment,
         required nonDealerPayment, required yakumanMultiplier}) async {},
     )));
+    await tester.scrollUntilVisible(
+      find.text('役満'),
+      250,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('2倍役満'), findsOneWidget);
     await tester.tap(find.byType(DropdownButton<int>));
     await tester.pumpAndSettle();
