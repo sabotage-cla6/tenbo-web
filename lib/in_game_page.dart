@@ -69,6 +69,7 @@ class InGamePage extends StatelessWidget {
       builder: (_) => ScoreRequestPage(
         players: displayPlayers,
         winnerUid: uid,
+        startingPoints: startingPoints,
         onRequest: onScoreRequest ?? ({
           required bool isTsumo,
           required int ronPoints,
