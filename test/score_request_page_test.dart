@@ -17,20 +17,22 @@ void main() {
       players: players,
       winnerUid: 'winner',
       onRequest: ({required isTsumo, required ronPoints, required dealerPayment,
-        required nonDealerPayment, required yakumanMultiplier}) async {
+        required nonDealerPayment, required yakumanMultiplier, required honba}) async {
         requested = {
           'isTsumo': isTsumo,
           'ronPoints': ronPoints,
           'dealerPayment': dealerPayment,
           'nonDealerPayment': nonDealerPayment,
           'yakumanMultiplier': yakumanMultiplier,
+          'honba': honba,
         };
       },
     )));
 
-    expect(find.text('東'), findsOneWidget);
-    expect(find.text('和了者'), findsOneWidget);
-    expect(find.text('25,000点'), findsOneWidget);
+    expect(find.text('和了者の立場'), findsOneWidget);
+    expect(find.text('親（東）'), findsOneWidget);
+    expect(find.text('子'), findsOneWidget);
+    expect(find.text('本場'), findsOneWidget);
     expect(find.text('20符'), findsOneWidget);
     expect(find.text('30符'), findsOneWidget);
     expect(find.text('50符'), findsOneWidget);
@@ -53,7 +55,7 @@ void main() {
     await tester.tap(ronChoice);
     await tester.pump();
 
-    final submit = find.text('支払いを依頼する');
+    final submit = find.text('点数請求');
     await tester.ensureVisible(submit);
     await tester.tap(submit);
     await tester.pumpAndSettle();
@@ -61,6 +63,7 @@ void main() {
     expect(requested?['isTsumo'], false);
     expect(requested?['ronPoints'], 2000);
     expect(requested?['yakumanMultiplier'], 1);
+    expect(requested?['honba'], 0);
   });
 
   testWidgets('ツモでは親子の支払い額ペアをGridから選択できる', (tester) async {
@@ -133,4 +136,42 @@ void main() {
     expect(requested?['yakumanMultiplier'], 2);
     expect(requested?['ronPoints'], 64000);
   });
+  testWidgets('本場を増減でき、点数選択肢には本場点を加算せず請求時に本場数を渡す', (tester) async {
+    Map<String, Object>? requested;
+    await tester.pumpWidget(MaterialApp(home: ScoreRequestPage(
+      players: players,
+      winnerUid: 'winner',
+      honba: 2,
+      onRequest: ({required isTsumo, required ronPoints, required dealerPayment,
+        required nonDealerPayment, required yakumanMultiplier, required honba}) async {
+        requested = {'ronPoints': ronPoints, 'honba': honba};
+      },
+    )));
+
+    expect(find.text('2 本場'), findsOneWidget);
+    expect(find.text('2,000点'), findsOneWidget);
+    await tester.tap(find.byIcon(Icons.add));
+    await tester.pump();
+    expect(find.text('3 本場'), findsOneWidget);
+    expect(find.text('2,000点'), findsOneWidget);
+    await tester.tap(find.byIcon(Icons.remove));
+    await tester.pump();
+    expect(find.text('2 本場'), findsOneWidget);
+
+    final choice = find.ancestor(
+      of: find.text('2,000点'),
+      matching: find.byType(InkWell),
+    ).first;
+    await tester.ensureVisible(choice);
+    await tester.tap(choice);
+    await tester.pump();
+    final submit = find.text('点数請求');
+    await tester.ensureVisible(submit);
+    await tester.tap(submit);
+    await tester.pumpAndSettle();
+
+    expect(requested?['ronPoints'], 2000);
+    expect(requested?['honba'], 2);
+  });
+
 }
