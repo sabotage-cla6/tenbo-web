@@ -30,6 +30,7 @@ class ScoreRequestPage extends StatefulWidget {
     required int dealerPayment,
     required int nonDealerPayment,
     required int yakumanMultiplier,
+    required int honba,
   }) onRequest;
 
   @override
@@ -43,6 +44,13 @@ class _ScoreRequestPageState extends State<ScoreRequestPage> {
   int? _nonDealerPayment;
   int _yakumanMultiplier = 2;
   bool _submitting = false;
+  late int _honba;
+
+  @override
+  void initState() {
+    super.initState();
+    _honba = widget.honba;
+  }
 
   String? get _selectedKey {
     if (_selectedYakuman) return 'yakuman-$_yakumanMultiplier';
@@ -122,7 +130,7 @@ class _ScoreRequestPageState extends State<ScoreRequestPage> {
     bool emphasized = false,
   }) {
     return Material(
-      color: selected ? _scoreGold : const Color(0xFFFFFFFF),
+      color: selected ? _scoreGold : const Color(0xFF263D30),
       borderRadius: BorderRadius.circular(9),
       child: InkWell(
         onTap: onTap,
@@ -133,8 +141,8 @@ class _ScoreRequestPageState extends State<ScoreRequestPage> {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(9),
             border: Border.all(
-              color: selected ? _scoreGold : const Color(0xFFD8D2C4),
-              width: selected ? 2 : 1,
+              color: selected ? _scoreGold : const Color(0xFF263D30),
+              width: selected ? 2 : 0,
             ),
           ),
           child: FittedBox(
@@ -142,7 +150,7 @@ class _ScoreRequestPageState extends State<ScoreRequestPage> {
             child: Text(
               label,
               style: TextStyle(
-                color: _scoreInk,
+                color: selected ? _scoreInk : Colors.white,
                 fontSize: emphasized ? 13 : 12,
                 fontWeight: FontWeight.bold,
               ),
@@ -297,6 +305,7 @@ class _ScoreRequestPageState extends State<ScoreRequestPage> {
         dealerPayment: _dealerPayment ?? 0,
         nonDealerPayment: _nonDealerPayment ?? 0,
         yakumanMultiplier: _selectedYakuman ? _yakumanMultiplier : 1,
+        honba: _honba,
       );
       if (mounted) Navigator.of(context).pop();
     } finally {
@@ -393,216 +402,206 @@ class _ScoreRequestPageState extends State<ScoreRequestPage> {
     }
 
     return Scaffold(
-      backgroundColor: _scorePaper,
-      appBar: AppBar(
-        backgroundColor: _scorePaper,
-        foregroundColor: _scoreInk,
-        titleSpacing: 20,
-        title: const Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.sports_esports, color: _scoreGold, size: 26),
-            SizedBox(width: 9),
-            Text('天棒', style: TextStyle(fontWeight: FontWeight.bold,
-                letterSpacing: 3)),
-          ],
-        ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: Center(
-              child: Text('${widget.round}  ${widget.honba}本場',
-                  style: const TextStyle(color: _scoreInk,
-                      fontSize: 12, fontWeight: FontWeight.bold)),
-            ),
-          ),
-        ],
-      ),
-      body: Stack(
-        children: [
-          Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [_scorePaper, Color(0xFFECEFE9)],
-              ),
-            ),
-            child: SafeArea(
-              child: Center(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(14),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 440),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        _buildTableBoard(),
-                        const SizedBox(height: 14),
-                        Text('🀄 和了（上がり）',
-                            style: const TextStyle(color: _scoreInk,
-                                fontWeight: FontWeight.bold)),
-                      ],
-                    ),
-                  ),
+      backgroundColor: const Color(0xFF050906),
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(8),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 380),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: const Color(0xFF102619),
+                  border: Border.all(color: _scoreGold, width: 1.5),
+                  borderRadius: BorderRadius.circular(16),
                 ),
-              ),
-            ),
-          ),
-          Positioned.fill(
-            child: ColoredBox(color: Colors.black.withValues(alpha: 0.72)),
-          ),
-          SafeArea(
-            child: Center(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 380),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF102619),
-                      border: Border.all(color: _scoreGold, width: 1.5),
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: const [
-                        BoxShadow(color: Colors.black87, blurRadius: 25,
-                            offset: Offset(0, 10)),
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      children: [
+                        const Text('🀄',
+                          style: TextStyle(fontSize: 17)),
+                        const SizedBox(width: 8),
+                        const Expanded(
+                          child: Text('和了（上がり）点数入力',
+                            style: TextStyle(color: _scoreGold,
+                              fontSize: 16, fontWeight: FontWeight.bold)),
+                        ),
                       ],
                     ),
-                    padding: const EdgeInsets.all(14),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Row(
-                          children: [
-                            const Expanded(
-                              child: Text('🀄 和了（上がり）点数入力',
-                                  style: TextStyle(color: _scoreGold,
-                                      fontSize: 16, fontWeight: FontWeight.bold)),
-                            ),
-                            IconButton(
-                              tooltip: 'キャンセル',
-                              visualDensity: VisualDensity.compact,
-                              onPressed: () => Navigator.of(context).pop(),
-                              icon: const Icon(Icons.close, color: Colors.white70),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        _settingGroup(
-                          label: '和了者の立場',
-                          child: _modalChoice(
-                            winner?.isDealer == true ? '親（東）' : '子',
-                            selected: true,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        _settingGroup(
-                          label: '和了方式',
-                          child: SegmentedButton<bool>(
-                            showSelectedIcon: false,
-                            style: SegmentedButton.styleFrom(
-                              backgroundColor: const Color(0xFF263D30),
-                              foregroundColor: Colors.white,
-                              selectedBackgroundColor: _scoreGold,
-                              selectedForegroundColor: _scoreInk,
-                              side: const BorderSide(color: Color(0xFF47765A)),
-                            ),
-                            segments: const [
-                              ButtonSegment(value: false, label: Text('ロン')),
-                              ButtonSegment(value: true, label: Text('ツモ')),
-                            ],
-                            selected: {_isTsumo},
-                            onSelectionChanged: (values) => setState(() {
-                              _isTsumo = values.first;
+                    const SizedBox(height: 12),
+                    _settingGroup(
+                      label: '和了者の立場',
+                      child: Row(
+                        children: [
+                          Expanded(child: _modalChoice('親（東）',
+                            selected: winner?.isDealer == true)),
+                          const SizedBox(width: 8),
+                          Expanded(child: _modalChoice('子',
+                            selected: winner != null && !winner.isDealer)),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    _settingGroup(
+                      label: '和了方式',
+                      child: Row(
+                        children: [
+                          Expanded(child: _modeButton('ロン', selected: !_isTsumo,
+                            onTap: () => setState(() {
+                              _isTsumo = false;
                               _selectedYakuman = false;
                               _ronPoints = null;
                               _dealerPayment = null;
                               _nonDealerPayment = null;
-                            }),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        _settingGroup(
-                          label: '本場',
-                          trailing: '+300点／本（ツモは各100点）',
-                          child: _modalChoice('${widget.honba} 本場',
-                              selected: false),
-                        ),
-                        const SizedBox(height: 10),
-                        const Text('点数・役の選択',
-                            style: TextStyle(color: Colors.white70,
-                                fontSize: 11, fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 6),
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF08140C),
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: const Color(0xFF2C5E3D)),
-                          ),
-                          child: Column(
-                            children: [
-                              _buildFuGrid(),
-                              const SizedBox(height: 8),
-                              _buildLimitGrid(),
-                              const SizedBox(height: 8),
-                              _buildYakumanGrid(),
-                              const SizedBox(height: 8),
-                              _buildSeventyFuGrid(),
-                              const SizedBox(height: 8),
-                              _buildHighFuGrid(),
-                            ],
-                          ),
-                        ),
-                        if (_isTsumo && _dealerPayment != null && !_selectedYakuman) ...[
-                          const SizedBox(height: 8),
-                          Text(
-                            '親：${_format(_dealerPayment!)}点 ／ 子：${_format(_nonDealerPayment!)}点',
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(color: Color(0xFFF1C978),
-                                fontWeight: FontWeight.bold, fontSize: 12),
-                          ),
+                            }))),
+                          const SizedBox(width: 8),
+                          Expanded(child: _modeButton('ツモ', selected: _isTsumo,
+                            onTap: () => setState(() {
+                              _isTsumo = true;
+                              _selectedYakuman = false;
+                              _ronPoints = null;
+                              _dealerPayment = null;
+                              _nonDealerPayment = null;
+                            }))),
                         ],
-                        const SizedBox(height: 12),
-                        Row(
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    _settingGroup(
+                      label: '本場',
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF08140C),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: const Color(0xFF47765A)),
+                        ),
+                        child: Row(
                           children: [
+                            _honbaButton(Icons.remove, () {
+                              if (_honba > 0) setState(() => _honba--);
+                            }, enabled: _honba > 0),
                             Expanded(
-                              child: OutlinedButton(
-                                onPressed: _submitting
-                                    ? null : () => Navigator.of(context).pop(),
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: Colors.white,
-                                  side: const BorderSide(color: Color(0xFF47765A)),
-                                  padding: const EdgeInsets.symmetric(vertical: 12),
-                                ),
-                                child: const Text('キャンセル'),
-                              ),
+                              child: Text('$_honba 本場',
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(color: _scoreGold,
+                                  fontWeight: FontWeight.bold, fontSize: 14)),
                             ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: FilledButton(
-                                onPressed: _submitting || _selectedKey == null
-                                    ? null : _submit,
-                                style: FilledButton.styleFrom(
-                                  backgroundColor: _scoreGold,
-                                  foregroundColor: _scoreInk,
-                                  padding: const EdgeInsets.symmetric(vertical: 12),
-                                ),
-                                child: Text(_submitting ? '請求中…' : '点数請求'),
-                              ),
-                            ),
+                            _honbaButton(Icons.add, () => setState(() => _honba++)),
                           ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    const Text('点数・役の選択',
+                      style: TextStyle(color: Colors.white70,
+                        fontSize: 11, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 6),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF08140C),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFF2C5E3D)),
+                      ),
+                      child: Column(
+                        children: [
+                          _buildFuGrid(),
+                          const SizedBox(height: 8),
+                          _buildLimitGrid(),
+                          const SizedBox(height: 8),
+                          _buildYakumanGrid(),
+                          const SizedBox(height: 8),
+                          _buildSeventyFuGrid(),
+                          const SizedBox(height: 8),
+                          _buildHighFuGrid(),
+                        ],
+                      ),
+                    ),
+                    if (_isTsumo && _dealerPayment != null && !_selectedYakuman) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        '親：${_format(_dealerPayment!)}点 ／ 子：${_format(_nonDealerPayment!)}点',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: Color(0xFFF1C978),
+                          fontWeight: FontWeight.bold, fontSize: 12),
+                      ),
+                    ],
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _footerButton('キャンセル',
+                            onPressed: _submitting ? null : () => Navigator.of(context).pop(),
+                            primary: false),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: _footerButton(_submitting ? '請求中…' : '点数請求',
+                            onPressed: _submitting || _selectedKey == null ? null : _submit,
+                            primary: true),
                         ),
                       ],
                     ),
-                  ),
+                  ],
                 ),
               ),
             ),
           ),
-        ],
+        ),
       ),
+    );
+  }
+
+  Widget _modeButton(String label, {required bool selected, required VoidCallback onTap}) {
+    return Material(
+      color: selected ? const Color(0xFFF0A10B) : const Color(0xFF263D30),
+      borderRadius: BorderRadius.circular(8),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 11),
+          child: Text(label, textAlign: TextAlign.center,
+            style: TextStyle(color: selected ? Colors.black : Colors.white,
+              fontWeight: FontWeight.bold, fontSize: 13)),
+        ),
+      ),
+    );
+  }
+
+  Widget _honbaButton(IconData icon, VoidCallback onTap, {bool enabled = true}) {
+    return Material(
+      color: const Color(0xFF263D30),
+      borderRadius: BorderRadius.circular(6),
+      child: InkWell(
+        onTap: enabled ? onTap : null,
+        borderRadius: BorderRadius.circular(6),
+        child: SizedBox(
+          width: 36,
+          height: 32,
+          child: Icon(icon, color: enabled ? Colors.white : Colors.white30, size: 19),
+        ),
+      ),
+    );
+  }
+
+  Widget _footerButton(String label, {required VoidCallback? onPressed, required bool primary}) {
+    return FilledButton(
+      onPressed: onPressed,
+      style: FilledButton.styleFrom(
+        backgroundColor: primary ? const Color(0xFFF0A10B) : const Color(0xFF263D30),
+        foregroundColor: primary ? Colors.black : Colors.white,
+        disabledBackgroundColor: const Color(0xFF263D30),
+        disabledForegroundColor: Colors.white38,
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+      child: Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
     );
   }
 
