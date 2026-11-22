@@ -25,6 +25,10 @@ void main() {
     )));
     expect(find.text('和了者：和了者'), findsOneWidget);
     expect(find.text('東 和了者  25,000点'), findsOneWidget);
+    expect(find.text('20符'), findsNothing);
+    expect(find.text('30符'), findsNothing);
+    expect(find.text('50符'), findsNothing);
+    expect(find.byType(GridView), findsOneWidget);
     await tester.scrollUntilVisible(
       find.text('3,900点'),
       250,
@@ -64,6 +68,7 @@ void main() {
     await tester.tap(find.text('ツモ'));
     await tester.pumpAndSettle();
     expect(find.text('放銃者からの支払い点数'), findsNothing);
+    expect(find.byType(GridView), findsOneWidget);
     await tester.scrollUntilVisible(
       find.text('300 / 500'),
       250,
