@@ -33,10 +33,10 @@ class _ScoreRequestPageState extends State<ScoreRequestPage> {
   int _yakumanMultiplier = 2;
   bool _submitting = false;
 
-  static const _ronChoiceGroups = <(String, List<int>)>[
-    ('20符', [1300, 2600, 5200]),
-    ('30符', [1000, 2000, 3900, 7700]),
-    ('50符', [8000, 12000, 16000, 24000, 32000]),
+  static const _ronChoices = <int>[
+    1300, 2600, 5200,
+    1000, 2000, 3900, 7700,
+    8000, 12000, 16000, 24000, 32000,
   ];
   static const _tsumoChoices = <(int, int)>[
     (300, 500), (400, 700), (500, 1000), (700, 1300),
@@ -115,38 +115,44 @@ class _ScoreRequestPageState extends State<ScoreRequestPage> {
             if (!_isTsumo) ...[
               const Text('放銃者からの支払い点数', style: TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
-              for (final group in _ronChoiceGroups) ...[
-                Padding(
-                  padding: const EdgeInsets.only(top: 8, bottom: 4),
-                  child: Text(group.$1, style: Theme.of(context).textTheme.labelLarge),
-                ),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    for (final points in group.$2)
-                      ChoiceChip(
-                        label: Text('${_format(points)}点'),
-                        selected: _ronPoints == points,
-                        onSelected: (_) => setState(() => _ronPoints = points),
-                      ),
-                  ],
-                ),
-              ],
+              GridView.count(
+                crossAxisCount: 3,
+                childAspectRatio: 2.2,
+                crossAxisSpacing: 8,
+                mainAxisSpacing: 8,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                children: [
+                  for (final points in _ronChoices)
+                    ChoiceChip(
+                      label: Text('${_format(points)}点'),
+                      selected: _ronPoints == points,
+                      onSelected: (_) => setState(() => _ronPoints = points),
+                    ),
+                ],
+              ),
             ] else ...[
               const Text('親・子の支払い点数', style: TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
-              Wrap(spacing: 8, runSpacing: 8, children: [
-                for (final pair in _tsumoChoices)
-                  ChoiceChip(
-                    label: Text('${_format(pair.$1)} / ${_format(pair.$2)}'),
-                    selected: _dealerPayment == pair.$2 && _nonDealerPayment == pair.$1,
-                    onSelected: (_) => setState(() {
-                      _nonDealerPayment = pair.$1;
-                      _dealerPayment = pair.$2;
-                    }),
-                  ),
-              ]),
+              GridView.count(
+                crossAxisCount: 3,
+                childAspectRatio: 2.2,
+                crossAxisSpacing: 8,
+                mainAxisSpacing: 8,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                children: [
+                  for (final pair in _tsumoChoices)
+                    ChoiceChip(
+                      label: Text('${_format(pair.$1)} / ${_format(pair.$2)}'),
+                      selected: _dealerPayment == pair.$2 && _nonDealerPayment == pair.$1,
+                      onSelected: (_) => setState(() {
+                        _nonDealerPayment = pair.$1;
+                        _dealerPayment = pair.$2;
+                      }),
+                    ),
+                ],
+              ),
               if (_dealerPayment != null) ...[
                 const SizedBox(height: 12),
                 Text('親：${_format(_dealerPayment!)}点 ／ 子：${_format(_nonDealerPayment!)}点'),
