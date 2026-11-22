@@ -16,6 +16,9 @@ class ScoreRequestPage extends StatefulWidget {
     this.startingPoints = 25000,
     this.round = '東1局',
     this.honba = 0,
+    this.embedded = false,
+    this.onCancel,
+    this.onComplete,
     super.key,
   });
 
@@ -24,6 +27,9 @@ class ScoreRequestPage extends StatefulWidget {
   final int startingPoints;
   final String round;
   final int honba;
+  final bool embedded;
+  final VoidCallback? onCancel;
+  final VoidCallback? onComplete;
   final Future<void> Function({
     required bool isTsumo,
     required int ronPoints,
@@ -307,7 +313,13 @@ class _ScoreRequestPageState extends State<ScoreRequestPage> {
         yakumanMultiplier: _selectedYakuman ? _yakumanMultiplier : 1,
         honba: _honba,
       );
-      if (mounted) Navigator.of(context).pop();
+      if (mounted) {
+        if (widget.embedded) {
+          widget.onComplete?.call();
+        } else {
+          Navigator.of(context).pop();
+        }
+      }
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -455,7 +467,7 @@ class _ScoreRequestPageState extends State<ScoreRequestPage> {
                       children: [
                         Expanded(
                           child: _footerButton('キャンセル',
-                            onPressed: _submitting ? null : () => Navigator.of(context).pop(),
+                            onPressed: _submitting ? null : (widget.onCancel ?? () => Navigator.of(context).pop()),
                             primary: false),
                         ),
                         const SizedBox(width: 8),
