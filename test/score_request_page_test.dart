@@ -25,7 +25,17 @@ void main() {
     )));
     expect(find.text('和了者：和了者'), findsOneWidget);
     expect(find.text('東 和了者  25,000点'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('3,900点'),
+      250,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.tap(find.text('3,900点'));
+    await tester.scrollUntilVisible(
+      find.text('支払いを依頼する'),
+      250,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.tap(find.text('支払いを依頼する'));
     await tester.pumpAndSettle();
     expect(requested?['isTsumo'], false);
@@ -48,7 +58,17 @@ void main() {
     await tester.tap(find.text('ツモ'));
     await tester.pumpAndSettle();
     expect(find.text('放銃者からの支払い点数'), findsNothing);
+    await tester.scrollUntilVisible(
+      find.text('300 / 500'),
+      250,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.tap(find.text('300 / 500'));
+    await tester.scrollUntilVisible(
+      find.text('支払いを依頼する'),
+      250,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.tap(find.text('支払いを依頼する'));
     await tester.pumpAndSettle();
     expect(requested?['isTsumo'], true);
