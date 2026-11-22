@@ -28,7 +28,7 @@ void main() {
     await tester.scrollUntilVisible(
       find.text('3,900点'),
       250,
-      scrollable: find.byType(ListView),
+      scrollable: find.byType(Scrollable).first,
     );
     final ronChoice = find.ancestor(
       of: find.text('3,900点'),
@@ -43,7 +43,6 @@ void main() {
     );
     expect(tester.widget<FilledButton>(submitButton).onPressed, isNotNull);
     await tester.tap(submitButton);
-    await tester.pumpAndSettle();
     await tester.pumpAndSettle();
     expect(requested?['isTsumo'], false);
     expect(requested?['ronPoints'], 3900);
@@ -68,7 +67,7 @@ void main() {
     await tester.scrollUntilVisible(
       find.text('300 / 500'),
       250,
-      scrollable: find.byType(ListView),
+      scrollable: find.byType(Scrollable).first,
     );
     final tsumoChoice = find.ancestor(
       of: find.text('300 / 500'),
@@ -83,7 +82,6 @@ void main() {
     );
     expect(tester.widget<FilledButton>(submitButton).onPressed, isNotNull);
     await tester.tap(submitButton);
-    await tester.pumpAndSettle();
     await tester.pumpAndSettle();
     expect(requested?['isTsumo'], true);
     expect(requested?['dealerPayment'], 500);
