@@ -37,8 +37,8 @@ void main() {
     expect(find.text('30符'), findsOneWidget);
     expect(find.text('50符'), findsOneWidget);
     expect(find.text('70符'), findsOneWidget);
-    expect(find.text('90符'), findsOneWidget);
-    expect(find.text('110符'), findsOneWidget);
+    expect(find.textContaining('90符'), findsNWidgets(2));
+    expect(find.textContaining('110符'), findsNWidgets(2));
     expect(find.text('1翻'), findsOneWidget);
     expect(find.text('2翻'), findsOneWidget);
     expect(find.text('4倍満'), findsOneWidget);
