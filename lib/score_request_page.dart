@@ -332,15 +332,9 @@ class _ScoreRequestPageState extends State<ScoreRequestPage> {
       if (player.uid == widget.winnerUid) winner = player;
     }
 
-    return Scaffold(
-      backgroundColor: const Color(0xFF050906),
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(8),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 380),
-              child: Container(
+    final content = ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 380),
+      child: Container(
                 decoration: BoxDecoration(
                   color: const Color(0xFF102619),
                   border: Border.all(color: _scoreGold, width: 1.5),
@@ -481,7 +475,20 @@ class _ScoreRequestPageState extends State<ScoreRequestPage> {
                   ],
                 ),
               ),
-            ),
+    );
+
+    if (widget.embedded) {
+      // 対局画面のスクロール領域を親に一本化する。
+      return content;
+    }
+
+    return Scaffold(
+      backgroundColor: const Color(0xFF050906),
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(8),
+            child: content,
           ),
         ),
       ),
