@@ -514,16 +514,32 @@ class _ActionDock extends StatefulWidget {
 }
 
 class _ActionDockState extends State<_ActionDock> {
-  bool _showScoreRequest = false;
+  void _openScoreRequest() {
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => Dialog(
+        backgroundColor: const Color(0xFF050906),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 20),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: 420,
+            maxHeight: MediaQuery.of(dialogContext).size.height * 0.9,
+          ),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(8),
+            child: widget.scoreRequestBuilder!(
+              onCancel: () => Navigator.of(dialogContext).pop(),
+              onComplete: () => Navigator.of(dialogContext).pop(),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    if (_showScoreRequest && widget.scoreRequestBuilder != null) {
-      return widget.scoreRequestBuilder!(
-        onCancel: () => setState(() => _showScoreRequest = false),
-        onComplete: () => setState(() => _showScoreRequest = false),
-      );
-    }
 
     const actions = [
       _ActionItem('リーチ', '1,000点供託', Icons.bolt, Color(0xFFB97719)),
@@ -553,7 +569,7 @@ class _ActionDockState extends State<_ActionDock> {
                   ? widget.onRiichi
                   : action.title == '和了'
                       ? widget.scoreRequestBuilder != null
-                          ? () => setState(() => _showScoreRequest = true)
+                          ? _openScoreRequest
                           : widget.onWin
                       : () => widget.onAction(action.title),
               borderRadius: BorderRadius.circular(12),
