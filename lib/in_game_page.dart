@@ -251,28 +251,25 @@ class InGamePage extends StatelessWidget {
                       onWin: selfPlayer == null ? () => _showAction(context, '和了') : null,
                       scoreRequestBuilder: selfPlayer == null
                           ? null
-                          : ({required onCancel, required onComplete}) => SizedBox(
-                              height: 700,
-                              child: ScoreRequestPage(
-                                players: displayPlayers,
-                                winnerUid: selfPlayer.uid!,
-                                startingPoints: startingPoints,
-                                round: displayRound,
-                                honba: displayHonba,
-                                embedded: true,
-                                onCancel: onCancel,
-                                onComplete: onComplete,
-                                onRequest: onScoreRequest ?? ({
-                                  required bool isTsumo,
-                                  required int ronPoints,
-                                  required int dealerPayment,
-                                  required int nonDealerPayment,
-                                  required int yakumanMultiplier,
-                                  required int honba,
-                                }) async {
-                                  _showAction(context, '点数請求の保存');
-                                },
-                              ),
+                          : ({required onCancel, required onComplete}) => ScoreRequestPage(
+                              players: displayPlayers,
+                              winnerUid: selfPlayer.uid!,
+                              startingPoints: startingPoints,
+                              round: displayRound,
+                              honba: displayHonba,
+                              embedded: true,
+                              onCancel: onCancel,
+                              onComplete: onComplete,
+                              onRequest: onScoreRequest ?? ({
+                                required bool isTsumo,
+                                required int ronPoints,
+                                required int dealerPayment,
+                                required int nonDealerPayment,
+                                required int yakumanMultiplier,
+                                required int honba,
+                              }) async {
+                                _showAction(context, '点数請求の保存');
+                              },
                             ),
                       riichiActive: selfPlayer?.isRiichi ?? false,
                       onRiichi: selfPlayer != null && (selfPlayer.isRiichi || selfPlayer.score >= 1000)
