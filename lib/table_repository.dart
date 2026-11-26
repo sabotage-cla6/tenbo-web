@@ -536,6 +536,22 @@ class FirestoreTableStore implements TableStore {
       );
       game['round'] = next['round'];
       game.remove('roundAdvance');
+
+      // 次局へ進む際、前局のリーチ表示を全員分解除する。
+      // 供託点（kyotakuSticks）と持ち点（score）は次局へ引き継ぐ。
+      final rawPlayers = game['players'];
+      if (rawPlayers is Map) {
+        final players = Map<String, dynamic>.from(rawPlayers);
+        for (final entry in players.entries) {
+          if (entry.value is Map) {
+            final player = Map<String, dynamic>.from(entry.value as Map);
+            player['isRiichi'] = false;
+            players[entry.key] = player;
+          }
+        }
+        game['players'] = players;
+      }
+
       transaction.update(tableRef, {
         'seats': next['seats'],
         'game': game,
