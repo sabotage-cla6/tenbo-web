@@ -44,7 +44,7 @@ void main() {
       expect(find.text('🍢 焼き鳥'), findsNWidgets(3));
       expect(find.text('リーチ'), findsOneWidget);
       expect(find.text('和了'), findsOneWidget);
-      expect(find.text('点棒移動'), findsOneWidget);
+      expect(find.text('点数支払'), findsOneWidget);
       expect(find.text('流局'), findsOneWidget);
       expect(find.text('次局へ'), findsOneWidget);
       expect(find.text('精算'), findsOneWidget);
