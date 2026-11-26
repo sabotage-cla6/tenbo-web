@@ -99,7 +99,7 @@ class InGamePage extends StatelessWidget {
             startingPoints: startingPoints,
             pendingDelta: _pendingDelta(player, gameState),
             onConfirmPayment: _canConfirmPayment(player, gameState, selfUid)
-                ? () => _confirmPayment(context, player.uid!)
+                ? () => _confirmPayment(context)
                 : null,
           );
         }
@@ -156,7 +156,7 @@ class InGamePage extends StatelessWidget {
       state.pendingWinnerUid != null &&
       state.pendingPayments.containsKey(player.uid);
 
-  Future<void> _confirmPayment(BuildContext context, String payerUid) async {
+  Future<void> _confirmPayment(BuildContext context) async {
     try {
       if (tableId == null) throw StateError('卓情報を取得できません。');
       await _repository.confirmScorePayment(tableId!);
