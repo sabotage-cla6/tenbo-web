@@ -283,8 +283,28 @@ service cloud.firestore {
               )
               && resource.data.game.get('pendingSettlement', null) == null
               && resource.data.game.roundAdvance is map
-              && request.resource.data.game.diff(resource.data.game).affectedKeys().hasOnly(['round', 'roundAdvance'])
+              && request.resource.data.game.diff(resource.data.game).affectedKeys().hasOnly(['round', 'roundAdvance', 'players'])
               && request.resource.data.game.get('roundAdvance', null) == null
+              // 次局開始時は全員のリーチ状態を解除するが、持ち点は変更しない。
+              && request.resource.data.game.players.diff(resource.data.game.players).affectedKeys().hasOnly([
+                resource.data.seats.get('east', null),
+                resource.data.seats.get('south', null),
+                resource.data.seats.get('west', null),
+                resource.data.seats.get('north', null)
+              ])
+              && request.resource.data.game.players[resource.data.seats.east].isRiichi == false
+              && request.resource.data.game.players[resource.data.seats.east].score == resource.data.game.players[resource.data.seats.east].score
+              && request.resource.data.game.players[resource.data.seats.south].isRiichi == false
+              && request.resource.data.game.players[resource.data.seats.south].score == resource.data.game.players[resource.data.seats.south].score
+              && request.resource.data.game.players[resource.data.seats.west].isRiichi == false
+              && request.resource.data.game.players[resource.data.seats.west].score == resource.data.game.players[resource.data.seats.west].score
+              && (
+                resource.data.playerCount == 3
+                || (
+                  request.resource.data.game.players[resource.data.seats.north].isRiichi == false
+                  && request.resource.data.game.players[resource.data.seats.north].score == resource.data.game.players[resource.data.seats.north].score
+                )
+              )
               && (
                 (
                   resource.data.game.roundAdvance.dealerContinues == true
