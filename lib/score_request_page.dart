@@ -147,9 +147,7 @@ class _ScoreRequestPageState extends State<ScoreRequestPage> {
       color: selected ? _scoreGold : const Color(0xFF263D30),
       borderRadius: BorderRadius.circular(9),
       child: InkWell(
-        onTap: () {
-          setState(() => _selectedPoint = point);
-        },
+        onTap: onTap,
         borderRadius: BorderRadius.circular(9),
         child: Container(
           alignment: Alignment.center,
@@ -230,6 +228,84 @@ class _ScoreRequestPageState extends State<ScoreRequestPage> {
     );
   }
 
+  Future<void> _showYakumanMultiplierDialog(Point point) async {
+    var multiplier = _yakumanMultiplier < 2 ? 2 : _yakumanMultiplier;
+
+    final selectedMultiplier = await showDialog<int>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          backgroundColor: const Color(0xFF102619),
+          title: const Text(
+            '役満の倍率設定',
+            style: TextStyle(
+              color: _scoreGold,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: Row(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              IconButton(
+                onPressed: multiplier > 2
+                    ? () => setDialogState(() => multiplier--)
+                    : null,
+                icon: const Icon(Icons.remove_circle_outline),
+                color: Colors.white,
+                disabledColor: Colors.white30,
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Text(
+                  '${multiplier}倍',
+                  style: const TextStyle(
+                    color: _scoreGold,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              IconButton(
+                onPressed: () => setDialogState(() => multiplier++),
+                icon: const Icon(Icons.add_circle_outline),
+                color: Colors.white,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text(
+                'キャンセル',
+                style: TextStyle(color: Colors.white70),
+              ),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(multiplier),
+              style: FilledButton.styleFrom(
+                backgroundColor: _scoreGold,
+                foregroundColor: _scoreInk,
+              ),
+              child: const Text('決定'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (!mounted || selectedMultiplier == null) return;
+
+    setState(() {
+      _selectedPoint = point;
+      _selectedYakuman = true;
+      _yakumanMultiplier = selectedMultiplier;
+      _ronPoints = null;
+      _dealerPayment = null;
+      _nonDealerPayment = null;
+    });
+  }
+
   Widget _buildPointGrid() {
     final cells = <Widget>[];
     for (final row in _requestPoints) {
@@ -244,16 +320,8 @@ class _ScoreRequestPageState extends State<ScoreRequestPage> {
             label: pointBtnLabel,
             point: row,
             selected:
-                _selectedYakuman && _yakumanMultiplier == row.yakumanMultiplier,
-            onTap: () {
-              setState(() {
-                _selectedYakuman = true;
-                _yakumanMultiplier = row.yakumanMultiplier;
-                _ronPoints = null;
-                _dealerPayment = null;
-                _nonDealerPayment = null;
-              });
-            },
+                _selectedYakuman,
+            onTap: () => _showYakumanMultiplierDialog(row),
             emphasized: true,
           );
         }
