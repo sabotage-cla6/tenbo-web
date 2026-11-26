@@ -218,7 +218,7 @@ service cloud.firestore {
                 || resource.data.seats.get('north', null) == request.auth.uid
               )
               && resource.data.game.pendingSettlement.payments.keys().hasAny([request.auth.uid])
-              && request.resource.data.game.diff(resource.data.game).affectedKeys().hasOnly(['players', 'pendingSettlement'])
+              && request.resource.data.game.diff(resource.data.game).affectedKeys().hasOnly(['players', 'pendingSettlement', 'kyotakuSticks'])
               && request.resource.data.game.players.diff(resource.data.game.players).affectedKeys().hasOnly([
                 request.auth.uid,
                 resource.data.game.pendingSettlement.winnerUid
