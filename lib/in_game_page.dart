@@ -124,7 +124,7 @@ class InGamePage extends StatelessWidget {
           isSelf: player.uid == selfPlayer.uid,
           pendingDelta: _pendingDelta(player, gameState),
           onConfirmPayment: _canConfirmPayment(player, gameState, selfUid)
-              ? () => _confirmPayment(context, player.uid!)
+              ? () => _confirmPayment(context)
               : null,
         );
       }
