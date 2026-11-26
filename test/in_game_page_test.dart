@@ -289,7 +289,8 @@ void main() {
 
       expect(find.text('インライン表示テスト卓'), findsOneWidget);
       expect(find.text('点数・役の選択'), findsOneWidget);
-      expect(find.text('和了点請求'), findsNothing);
+      // ダイアログ表示中も背後の操作ボタン領域は残る。
+      expect(find.text('和了点請求'), findsOneWidget);
 
       final cancelButton = find.text('キャンセル');
       await tester.ensureVisible(cancelButton);
