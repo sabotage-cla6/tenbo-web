@@ -172,6 +172,100 @@ service cloud.firestore {
                 && request.resource.data.game.kyotakuSticks == (resource.data.game.kyotakuSticks > 0 ? resource.data.game.kyotakuSticks - 1 : 0)
               )
             )
+            || (
+              // 和了者本人が、点数請求の支払候補を登録する。
+              resource.data.status == 'playing'
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['game', 'updatedAt'])
+              && exists(/databases/$(database)/documents/tables/$(tableId)/members/$(request.auth.uid))
+              && (
+                resource.data.seats.get('east', null) == request.auth.uid
+                || resource.data.seats.get('south', null) == request.auth.uid
+                || resource.data.seats.get('west', null) == request.auth.uid
+                || resource.data.seats.get('north', null) == request.auth.uid
+              )
+              && resource.data.game.get('pendingSettlement', null) == null
+              && request.resource.data.game.diff(resource.data.game).affectedKeys().hasOnly(['pendingSettlement'])
+              && request.resource.data.game.pendingSettlement.winnerUid == request.auth.uid
+              && request.resource.data.game.pendingSettlement.isTsumo is bool
+              && request.resource.data.game.pendingSettlement.kyotakuAmount == resource.data.game.kyotakuSticks * 1000
+              && request.resource.data.game.pendingSettlement.payments.size() > 0
+              && !request.resource.data.game.pendingSettlement.payments.keys().hasAny([request.auth.uid])
+              && request.resource.data.game.pendingSettlement.payments.keys().hasOnly([
+                resource.data.seats.get('east', null),
+                resource.data.seats.get('south', null),
+                resource.data.seats.get('west', null),
+                resource.data.seats.get('north', null)
+              ])
+            )
+            || (
+              // 和了者本人は、未確定の自分の点数請求を取り消せる。
+              resource.data.status == 'playing'
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['game', 'updatedAt'])
+              && exists(/databases/$(database)/documents/tables/$(tableId)/members/$(request.auth.uid))
+              && resource.data.game.pendingSettlement.winnerUid == request.auth.uid
+              && request.resource.data.game.diff(resource.data.game).affectedKeys().hasOnly(['pendingSettlement'])
+              && request.resource.data.game.get('pendingSettlement', null) == null
+            )
+            || (
+              // 支払者本人が自分の支払額だけを確定し、和了者の点数へ加算する。
+              resource.data.status == 'playing'
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['game', 'updatedAt'])
+              && exists(/databases/$(database)/documents/tables/$(tableId)/members/$(request.auth.uid))
+              && (
+                resource.data.seats.get('east', null) == request.auth.uid
+                || resource.data.seats.get('south', null) == request.auth.uid
+                || resource.data.seats.get('west', null) == request.auth.uid
+                || resource.data.seats.get('north', null) == request.auth.uid
+              )
+              && resource.data.game.pendingSettlement.payments.keys().hasAny([request.auth.uid])
+              && request.resource.data.game.diff(resource.data.game).affectedKeys().hasOnly(['players', 'pendingSettlement', 'kyotakuSticks'])
+              && request.resource.data.game.players.diff(resource.data.game.players).affectedKeys().hasOnly([
+                request.auth.uid,
+                resource.data.game.pendingSettlement.winnerUid
+              ])
+              && request.resource.data.game.players[request.auth.uid].diff(resource.data.game.players[request.auth.uid]).affectedKeys().hasOnly(['score'])
+              && request.resource.data.game.players[resource.data.game.pendingSettlement.winnerUid].diff(
+                resource.data.game.players[resource.data.game.pendingSettlement.winnerUid]
+              ).affectedKeys().hasOnly(['score'])
+              && request.resource.data.game.players[request.auth.uid].score
+                == resource.data.game.players[request.auth.uid].score
+                  - resource.data.game.pendingSettlement.payments[request.auth.uid]
+              && request.resource.data.game.players[resource.data.game.pendingSettlement.winnerUid].score
+                == resource.data.game.players[resource.data.game.pendingSettlement.winnerUid].score
+                  + resource.data.game.pendingSettlement.payments[request.auth.uid]
+                  + (
+                    (!resource.data.game.pendingSettlement.isTsumo
+                      || resource.data.game.pendingSettlement.payments.size() == 1)
+                      ? resource.data.game.pendingSettlement.get('kyotakuAmount', 0)
+                      : 0
+                  )
+              && (
+                (!resource.data.game.pendingSettlement.isTsumo
+                  || resource.data.game.pendingSettlement.payments.size() == 1)
+                  ? request.resource.data.game.kyotakuSticks == 0
+                  : request.resource.data.game.kyotakuSticks == resource.data.game.kyotakuSticks
+              )
+              && (
+                (
+                  resource.data.game.pendingSettlement.isTsumo == true
+                  && (
+                    request.resource.data.game.get('pendingSettlement', null) == null
+                    || (
+                      request.resource.data.game.pendingSettlement.winnerUid == resource.data.game.pendingSettlement.winnerUid
+                      && request.resource.data.game.pendingSettlement.isTsumo == true
+                      && request.resource.data.game.pendingSettlement.payments.diff(
+                        resource.data.game.pendingSettlement.payments
+                      ).affectedKeys().hasOnly([request.auth.uid])
+                      && !request.resource.data.game.pendingSettlement.payments.keys().hasAny([request.auth.uid])
+                    )
+                  )
+                )
+                || (
+                  resource.data.game.pendingSettlement.isTsumo == false
+                  && request.resource.data.game.get('pendingSettlement', null) == null
+                )
+              )
+            )
           )
         );
       allow delete: if signedIn()

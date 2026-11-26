@@ -44,7 +44,7 @@ void main() {
       expect(find.text('🍢 焼き鳥'), findsNWidgets(3));
       expect(find.text('リーチ'), findsOneWidget);
       expect(find.text('和了'), findsOneWidget);
-      expect(find.text('点棒移動'), findsOneWidget);
+      expect(find.text('点数支払'), findsOneWidget);
       expect(find.text('流局'), findsOneWidget);
       expect(find.text('次局へ'), findsOneWidget);
       expect(find.text('精算'), findsOneWidget);
@@ -264,6 +264,42 @@ void main() {
       await tester.pumpAndSettle();
 
       verify(repository.toggleRiichi('table-123')).called(1);
+    });
+
+    testWidgets('和了を押すと画面遷移せず操作ボタン領域が点数入力に切り替わり、キャンセルで戻る', (tester) async {
+      const seatedPlayers = [
+        GamePlayer(uid: 'east-uid', wind: '東', name: '東家', score: 25000, isDealer: true),
+        GamePlayer(uid: 'south-uid', wind: '南', name: '南家', score: 25000),
+        GamePlayer(uid: 'west-uid', wind: '西', name: '西家', score: 25000),
+        GamePlayer(uid: 'north-uid', wind: '北', name: '北家', score: 25000),
+      ];
+
+      await tester.pumpWidget(MaterialApp(
+        home: InGamePage(
+          tableName: 'インライン表示テスト卓',
+          players: seatedPlayers,
+          currentUserUid: 'south-uid',
+        ),
+      ));
+
+      final winButton = find.text('和了');
+      await tester.ensureVisible(winButton);
+      await tester.tap(winButton);
+      await tester.pumpAndSettle();
+
+      expect(find.text('インライン表示テスト卓'), findsOneWidget);
+      expect(find.text('点数・役の選択'), findsOneWidget);
+      // ダイアログ表示中も背後の操作ボタン領域は残る。
+      expect(find.text('和了点請求'), findsOneWidget);
+
+      final cancelButton = find.text('キャンセル');
+      await tester.ensureVisible(cancelButton);
+      await tester.tap(cancelButton);
+      await tester.pumpAndSettle();
+
+      expect(find.text('インライン表示テスト卓'), findsOneWidget);
+      expect(find.text('和了点請求'), findsOneWidget);
+      expect(find.text('点数・役の選択'), findsNothing);
     });
 
     testWidgets('操作ボタンは未実装であることを案内する', (tester) async {

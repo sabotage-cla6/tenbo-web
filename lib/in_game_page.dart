@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'table_repository.dart';
+import 'score_request_page.dart';
 
 const _ink = Color(0xFF18352E);
 const _green = Color(0xFF245447);
@@ -22,6 +23,7 @@ class InGamePage extends StatelessWidget {
     this.gameStateStream,
     this.repository,
     this.onRiichi,
+    this.onScoreRequest,
     super.key,
   });
 
@@ -36,6 +38,7 @@ class InGamePage extends StatelessWidget {
   final Stream<GameState>? gameStateStream;
   final TableRepository? repository;
   final Future<void> Function()? onRiichi;
+  final Future<void> Function({required bool isDealer, required bool isTsumo, required int ronPoints, required int dealerPayment, required int nonDealerPayment, required int yakumanMultiplier, required int honba})? onScoreRequest;
 
   TableRepository get _repository => repository ??
       (throw StateError('対局画面にはTableRepositoryの指定が必要です。'));
@@ -58,7 +61,7 @@ class InGamePage extends StatelessWidget {
 
   void _showAction(BuildContext context, String action) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(action + '機能は今後実装します。')),
+      SnackBar(content: Text('$action機能は今後実装します。')),
     );
   }
 
@@ -79,6 +82,9 @@ class InGamePage extends StatelessWidget {
     required String round,
     required int honba,
     required int kyotaku,
+    required BuildContext context,
+    required GameState? gameState,
+    required String? selfUid,
   }) {
     final positions = List<Widget>.filled(9, const SizedBox.shrink());
 
@@ -91,6 +97,10 @@ class InGamePage extends StatelessWidget {
           positions[position] = _PlayerPanel(
             player: player,
             startingPoints: startingPoints,
+            pendingDelta: _pendingDelta(player, gameState),
+            onConfirmPayment: _canConfirmPayment(player, gameState, selfUid)
+                ? () => _confirmPayment(context)
+                : null,
           );
         }
       }
@@ -112,6 +122,10 @@ class InGamePage extends StatelessWidget {
           player: player,
           startingPoints: startingPoints,
           isSelf: player.uid == selfPlayer.uid,
+          pendingDelta: _pendingDelta(player, gameState),
+          onConfirmPayment: _canConfirmPayment(player, gameState, selfUid)
+              ? () => _confirmPayment(context)
+              : null,
         );
       }
     }
@@ -122,6 +136,39 @@ class InGamePage extends StatelessWidget {
       kyotaku: kyotaku,
     );
     return positions;
+  }
+
+  int? _pendingDelta(GamePlayer player, GameState? state) {
+    if (state == null || state.pendingWinnerUid == null || player.uid == null) return null;
+    if (player.uid == state.pendingWinnerUid) {
+      final payments = state.pendingIsTsumo
+          ? state.pendingPayments.values.fold<int>(0, (sum, amount) => sum + amount)
+          : state.pendingPayments.values.first;
+      return payments + state.pendingKyotaku;
+    }
+    // ロンは支払候補者全員にタップ操作を表示するが、
+    // 実際に支払うのは最初に確定した一人だけなので、事前の減点表示はしない。
+    if (!state.pendingIsTsumo) return null;
+    final amount = state.pendingPayments[player.uid];
+    return amount == null ? null : -amount;
+  }
+
+  bool _canConfirmPayment(GamePlayer player, GameState? state, String? selfUid) =>
+      state != null &&
+      player.uid != null &&
+      player.uid == selfUid &&
+      state.pendingWinnerUid != null &&
+      state.pendingPayments.containsKey(player.uid);
+
+  Future<void> _confirmPayment(BuildContext context) async {
+    try {
+      if (tableId == null) throw StateError('卓情報を取得できません。');
+      await _repository.confirmScorePayment(tableId!);
+    } catch (error) {
+      if (!context.mounted) return;
+      final message = error is StateError ? error.message.toString() : '点数支払の確定に失敗しました。';
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    }
   }
 
   Widget _buildPage(BuildContext context, GameState? gameState) {
@@ -138,7 +185,7 @@ class InGamePage extends StatelessWidget {
     final roundWind = gameState?.round.wind == 'south' ? '南'
         : gameState?.round.wind == 'west' ? '西'
         : gameState?.round.wind == 'north' ? '北' : '東';
-    final displayRound = gameState == null ? round : '$roundWind' + gameState.round.number.toString() + '局';
+    final displayRound = gameState == null ? round : '$roundWind${gameState.round.number}局';
     final displayHonba = gameState?.round.honba ?? honba;
     final displayKyotaku = gameState == null ? kyotaku : gameState.kyotakuSticks * 1000;
     final selfUid = currentUserUid ?? (tableId == null ? null : _repository.currentUserUid);
@@ -233,6 +280,9 @@ class InGamePage extends StatelessWidget {
                                       round: displayRound,
                                       honba: displayHonba,
                                       kyotaku: displayKyotaku,
+                                      context: context,
+                                      gameState: gameState,
+                                      selfUid: selfUid,
                                     ),
                                   ),
                                 ),
@@ -244,7 +294,48 @@ class InGamePage extends StatelessWidget {
                     ),
                     const SizedBox(height: 14),
                     _ActionDock(
+                      onCancelScoreRequest: tableId == null
+                          ? null
+                          : () => _repository.cancelScoreRequest(tableId!),
                       onAction: (action) => _showAction(context, action),
+                      onWin: selfPlayer == null ? () => _showAction(context, '和了') : null,
+                      scoreRequestBuilder: selfPlayer == null
+                          ? null
+                          : ({required onCancel, required onComplete}) => ScoreRequestPage(
+                              players: displayPlayers,
+                              winnerUid: selfPlayer.uid!,
+                              startingPoints: startingPoints,
+                              round: displayRound,
+                              honba: displayHonba,
+                              embedded: true,
+                              onCancel: onCancel,
+                              onComplete: onComplete,
+                              onRequest: onScoreRequest ?? ({
+                                required bool isTsumo,
+                                required bool isDealer,
+                                required int ronPoints,
+                                required int dealerPayment,
+                                required int nonDealerPayment,
+                                required int yakumanMultiplier,
+                                required int honba,
+                              }) async {
+                                if (tableId == null) throw StateError('卓情報を取得できません。');
+                                final payments = <String, int>{
+                                  for (final player in displayPlayers)
+                                    if (player.uid != null && player.uid != selfPlayer.uid)
+                                      player.uid!: isTsumo
+                                          ? (player.isDealer ? dealerPayment : nonDealerPayment) + honba * 100
+                                          : ronPoints + honba * 300,
+                                };
+                                await _repository.createScoreRequest(
+                                  tableId!,
+                                  winnerUid: selfPlayer.uid!,
+                                  payments: payments,
+                                  isTsumo: isTsumo,
+                                  kyotakuAmount: displayKyotaku,
+                                );
+                              },
+                            ),
                       riichiActive: selfPlayer?.isRiichi ?? false,
                       onRiichi: selfPlayer != null && (selfPlayer.isRiichi || selfPlayer.score >= 1000)
                           ? () => _toggleRiichi(context) : null,
@@ -316,7 +407,7 @@ class _GameInfoBar extends StatelessWidget {
                   Text(tableName, maxLines: 1, overflow: TextOverflow.ellipsis,
                       style: const TextStyle(color: _ink, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 3),
-                  Text(round + '  •  配点 ' + _format(startingPoints) + '点',
+                  Text('$round  •  配点 ${_format(startingPoints)}点',
                       style: const TextStyle(color: Colors.black54, fontSize: 12)),
                 ],
               ),
@@ -330,11 +421,13 @@ class _GameInfoBar extends StatelessWidget {
 }
 
 class _PlayerPanel extends StatelessWidget {
-  const _PlayerPanel({required this.player, required this.startingPoints, this.isSelf = false});
+  const _PlayerPanel({required this.player, required this.startingPoints, this.isSelf = false, this.pendingDelta, this.onConfirmPayment});
 
   final GamePlayer? player;
   final int startingPoints;
   final bool isSelf;
+  final int? pendingDelta;
+  final VoidCallback? onConfirmPayment;
 
   String _format(int value) =>
       value.toString().replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (_) => ',');
@@ -343,7 +436,12 @@ class _PlayerPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     if (player == null) return const SizedBox.shrink();
     final diff = player!.score - startingPoints;
-    return Container(
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onConfirmPayment,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
       padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 5),
       decoration: BoxDecoration(
         color: const Color(0xE6193828),
@@ -388,8 +486,22 @@ class _PlayerPanel extends StatelessWidget {
             child: Text(_format(player!.score),
                 style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900)),
           ),
+          if (pendingDelta != null)
+            Text(
+              '${pendingDelta! >= 0 ? '+' : ''}${_format(pendingDelta!)}点',
+              style: TextStyle(
+                color: pendingDelta! >= 0 ? const Color(0xFF73D69A) : const Color(0xFFFF9992),
+                fontSize: 11,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          if (onConfirmPayment != null)
+            const Text(
+              'タップして支払',
+              style: TextStyle(color: Color(0xFFF1C978), fontSize: 9, fontWeight: FontWeight.bold),
+            ),
           Text(
-            (diff >= 0 ? '+' : '') + _format(diff),
+            '${diff >= 0 ? '+' : ''}${_format(diff)}',
             style: TextStyle(
               color: diff >= 0 ? const Color(0xFF73D69A) : const Color(0xFFFF9992),
               fontSize: 10,
@@ -407,6 +519,8 @@ class _PlayerPanel extends StatelessWidget {
             ],
           ),
         ],
+      ),
+        ),
       ),
     );
   }
@@ -452,32 +566,88 @@ class _RoundPanel extends StatelessWidget {
               child: Text(round, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900)),
             ),
             const SizedBox(height: 4),
-            Text(honba.toString() + ' 本場',
+            Text('$honba 本場',
                 style: const TextStyle(color: Color(0xFFF1C978), fontSize: 11, fontWeight: FontWeight.bold)),
             const SizedBox(height: 7),
             const Icon(Icons.horizontal_rule, color: Colors.white, size: 20),
             const SizedBox(height: 2),
             const Text('供託', style: TextStyle(color: Colors.white60, fontSize: 9)),
-            Text(_format(kyotaku) + '点',
+            Text('${_format(kyotaku)}点',
                 style: const TextStyle(color: Color(0xFFF1C978), fontSize: 12, fontWeight: FontWeight.bold)),
           ],
         ),
       );
 }
 
-class _ActionDock extends StatelessWidget {
-  const _ActionDock({required this.onAction, this.riichiActive = false, this.onRiichi});
+class _ActionDock extends StatefulWidget {
+  const _ActionDock({
+    required this.onAction,
+    this.onCancelScoreRequest,
+    this.onWin,
+    this.scoreRequestBuilder,
+    this.riichiActive = false,
+    this.onRiichi,
+  });
 
   final ValueChanged<String> onAction;
+  final Future<void> Function()? onCancelScoreRequest;
+  final VoidCallback? onWin;
+  final Widget Function({
+    required VoidCallback onCancel,
+    required VoidCallback onComplete,
+  })? scoreRequestBuilder;
   final bool riichiActive;
   final VoidCallback? onRiichi;
 
   @override
+  State<_ActionDock> createState() => _ActionDockState();
+}
+
+class _ActionDockState extends State<_ActionDock> {
+  void _openScoreRequest() {
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => Dialog(
+        backgroundColor: const Color(0xFF050906),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 20),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: 420,
+            maxHeight: MediaQuery.of(dialogContext).size.height * 0.9,
+          ),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(8),
+            child: widget.scoreRequestBuilder!(
+              onCancel: () async {
+                try {
+                  await widget.onCancelScoreRequest?.call();
+                  if (dialogContext.mounted) Navigator.of(dialogContext).pop();
+                } catch (error) {
+                  if (!dialogContext.mounted) return;
+                  final message = error is StateError
+                      ? error.message.toString()
+                      : '点数請求の取消に失敗しました。';
+                  ScaffoldMessenger.of(dialogContext).showSnackBar(
+                    SnackBar(content: Text(message)),
+                  );
+                }
+              },
+              onComplete: () => Navigator.of(dialogContext).pop(),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
+
     const actions = [
       _ActionItem('リーチ', '1,000点供託', Icons.bolt, Color(0xFFB97719)),
       _ActionItem('和了', '和了点請求', Icons.sports_martial_arts, Color(0xFFB9443D)),
-      _ActionItem('点棒移動', '沖和・特殊精算', Icons.swap_horiz, Color(0xFF347BA5)),
+      _ActionItem('点数支払', '支払の確定', Icons.swap_horiz, Color(0xFF347BA5)),
       _ActionItem('流局', 'ノーテン罰符', Icons.autorenew, Color(0xFF526477)),
       _ActionItem('次局へ', '局・親更新', Icons.skip_next, Color(0xFF39865B)),
       _ActionItem('精算', '対局終了', Icons.flag_outlined, Color(0xFF80509A)),
@@ -492,10 +662,19 @@ class _ActionDock extends StatelessWidget {
       children: [
         for (final action in actions)
           Material(
-            color: action.title == 'リーチ' && onRiichi == null ? Colors.grey : action.color,
+            color: (action.title == 'リーチ' && widget.onRiichi == null) ||
+                    (action.title == '和了' && widget.onWin == null && widget.scoreRequestBuilder == null)
+                ? Colors.grey
+                : action.color,
             borderRadius: BorderRadius.circular(12),
             child: InkWell(
-              onTap: action.title == 'リーチ' ? onRiichi : () => onAction(action.title),
+              onTap: action.title == 'リーチ'
+                  ? widget.onRiichi
+                  : action.title == '和了'
+                      ? widget.scoreRequestBuilder != null
+                          ? _openScoreRequest
+                          : widget.onWin
+                      : () => widget.onAction(action.title),
               borderRadius: BorderRadius.circular(12),
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
@@ -506,11 +685,12 @@ class _ActionDock extends StatelessWidget {
                     const SizedBox(height: 3),
                     Text(action.title, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
                     Text(
-                        action.title == 'リーチ' && riichiActive
-                            ? 'もう一度押して解除'
-                            : action.subtitle,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(color: Colors.white70, fontSize: 9)),
+                      action.title == 'リーチ' && widget.riichiActive
+                          ? 'もう一度押して解除'
+                          : action.subtitle,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.white70, fontSize: 9),
+                    ),
                   ],
                 ),
               ),
