@@ -60,6 +60,8 @@ class _ScoreRequestPageState extends State<ScoreRequestPage> {
   void initState() {
     super.initState();
     _honba = widget.honba;
+    final winner = widget.players.where((p) => p.uid == widget.winnerUid);
+    _isDealer = winner.isNotEmpty && winner.first.isDealer;
   }
 
   String? get _selectedKey {
