@@ -275,7 +275,12 @@ service cloud.firestore {
               resource.data.status == 'playing'
               && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['seats', 'game', 'updatedAt'])
               && exists(/databases/$(database)/documents/tables/$(tableId)/members/$(request.auth.uid))
-              && resource.data.seats.values().hasAny([request.auth.uid])
+              && (
+                resource.data.seats.get('east', null) == request.auth.uid
+                || resource.data.seats.get('south', null) == request.auth.uid
+                || resource.data.seats.get('west', null) == request.auth.uid
+                || resource.data.seats.get('north', null) == request.auth.uid
+              )
               && resource.data.game.get('pendingSettlement', null) == null
               && resource.data.game.roundAdvance is map
               && request.resource.data.game.diff(resource.data.game).affectedKeys().hasOnly(['round', 'roundAdvance'])
