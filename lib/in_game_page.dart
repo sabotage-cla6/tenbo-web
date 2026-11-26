@@ -291,6 +291,9 @@ class InGamePage extends StatelessWidget {
                     ),
                     const SizedBox(height: 14),
                     _ActionDock(
+                      onCancelScoreRequest: tableId == null
+                          ? null
+                          : () => _repository.cancelScoreRequest(tableId!),
                       onAction: (action) => _showAction(context, action),
                       onWin: selfPlayer == null ? () => _showAction(context, '和了') : null,
                       scoreRequestBuilder: selfPlayer == null
@@ -576,6 +579,7 @@ class _RoundPanel extends StatelessWidget {
 class _ActionDock extends StatefulWidget {
   const _ActionDock({
     required this.onAction,
+    this.onCancelScoreRequest,
     this.onWin,
     this.scoreRequestBuilder,
     this.riichiActive = false,
@@ -583,6 +587,7 @@ class _ActionDock extends StatefulWidget {
   });
 
   final ValueChanged<String> onAction;
+  final Future<void> Function()? onCancelScoreRequest;
   final VoidCallback? onWin;
   final Widget Function({
     required VoidCallback onCancel,
@@ -613,7 +618,7 @@ class _ActionDockState extends State<_ActionDock> {
             child: widget.scoreRequestBuilder!(
               onCancel: () async {
                 try {
-                  await _repository.cancelScoreRequest(tableId!);
+                  await widget.onCancelScoreRequest?.call();
                   if (dialogContext.mounted) Navigator.of(dialogContext).pop();
                 } catch (error) {
                   if (!dialogContext.mounted) return;
