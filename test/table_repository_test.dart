@@ -461,11 +461,14 @@ void main() {
         'kyotakuSticks': 0,
         'players': {},
         'roundAdvance': {'winnerUid': 'winner', 'dealerContinues': false},
+        'seats': {'east': 'A', 'south': 'B', 'west': 'C', 'north': 'D'},
       });
 
       expect(state.hasPendingRoundAdvance, isTrue);
       expect(state.round.wind, 'south');
       expect(state.round.number, 4);
+      expect(state.seats['east'], 'A');
+      expect(state.seats['north'], 'D');
     });
 
     test('局進行待ち情報がなければ次局へ進めない状態にする', () {
