@@ -317,8 +317,8 @@ class InGamePage extends StatelessWidget {
                                   for (final player in displayPlayers)
                                     if (player.uid != null && player.uid != selfPlayer.uid)
                                       player.uid!: isTsumo
-                                          ? (player.isDealer ? dealerPayment : nonDealerPayment)
-                                          : ronPoints,
+                                          ? (player.isDealer ? dealerPayment : nonDealerPayment) + honba * 100
+                                          : ronPoints + honba * 300,
                                 };
                                 await _repository.createScoreRequest(
                                   tableId!,
@@ -486,6 +486,11 @@ class _PlayerPanel extends StatelessWidget {
                 fontSize: 11,
                 fontWeight: FontWeight.w900,
               ),
+            ),
+          if (onConfirmPayment != null)
+            const Text(
+              'タップして支払',
+              style: TextStyle(color: Color(0xFFF1C978), fontSize: 9, fontWeight: FontWeight.bold),
             ),
           Text(
             '${diff >= 0 ? '+' : ''}${_format(diff)}',
