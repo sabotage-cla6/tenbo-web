@@ -54,12 +54,10 @@ class _ScoreRequestPageState extends State<ScoreRequestPage> {
   int? _nonDealerPayment;
   int _yakumanMultiplier = 2;
   bool _submitting = false;
-  late int _honba;
 
   @override
   void initState() {
     super.initState();
-    _honba = widget.honba;
     final winner = widget.players.where((p) => p.uid == widget.winnerUid);
     _isDealer = winner.isNotEmpty && winner.first.isDealer;
   }
@@ -381,7 +379,7 @@ class _ScoreRequestPageState extends State<ScoreRequestPage> {
         dealerPayment: _dealerPayment ?? 0,
         nonDealerPayment: _nonDealerPayment ?? 0,
         yakumanMultiplier: _selectedYakuman ? _yakumanMultiplier : 1,
-        honba: _honba,
+        honba: widget.honba,
       );
       if (mounted) {
         if (widget.embedded) {
@@ -430,6 +428,24 @@ class _ScoreRequestPageState extends State<ScoreRequestPage> {
                   ),
                 ),
               ],
+            ),
+            const SizedBox(height: 6),
+            Container(
+              alignment: Alignment.center,
+              padding: const EdgeInsets.symmetric(vertical: 7),
+              decoration: BoxDecoration(
+                color: const Color(0xFF08140C),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFF47765A)),
+              ),
+              child: Text(
+                '${widget.round} ${widget.honba}本場',
+                style: const TextStyle(
+                  color: _scoreGold,
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
             const SizedBox(height: 12),
             _settingGroup(
@@ -488,37 +504,6 @@ class _ScoreRequestPageState extends State<ScoreRequestPage> {
               ),
             ),
             const SizedBox(height: 8),
-            _settingGroup(
-              label: '本場',
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF08140C),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: const Color(0xFF47765A)),
-                ),
-                child: Row(
-                  children: [
-                    _honbaButton(Icons.remove, () {
-                      if (_honba > 0) setState(() => _honba--);
-                    }, enabled: _honba > 0),
-                    Expanded(
-                      child: Text(
-                        '$_honba 本場',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          color: _scoreGold,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ),
-                    _honbaButton(Icons.add, () => setState(() => _honba++)),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
             const Text(
               '点数・役の選択',
               style: TextStyle(
@@ -618,30 +603,6 @@ class _ScoreRequestPageState extends State<ScoreRequestPage> {
               fontWeight: FontWeight.bold,
               fontSize: 13,
             ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _honbaButton(
-    IconData icon,
-    VoidCallback onTap, {
-    bool enabled = true,
-  }) {
-    return Material(
-      color: const Color(0xFF263D30),
-      borderRadius: BorderRadius.circular(6),
-      child: InkWell(
-        onTap: enabled ? onTap : null,
-        borderRadius: BorderRadius.circular(6),
-        child: SizedBox(
-          width: 36,
-          height: 32,
-          child: Icon(
-            icon,
-            color: enabled ? Colors.white : Colors.white30,
-            size: 19,
           ),
         ),
       ),
