@@ -94,6 +94,10 @@ class InGamePage extends StatelessWidget {
           positions[position] = _PlayerPanel(
             player: player,
             startingPoints: startingPoints,
+            pendingDelta: _pendingDelta(player, gameState),
+            onConfirmPayment: _canConfirmPayment(player, gameState, selfUid)
+                ? () => _confirmPayment(context, player.uid!)
+                : null,
           );
         }
       }
@@ -115,6 +119,10 @@ class InGamePage extends StatelessWidget {
           player: player,
           startingPoints: startingPoints,
           isSelf: player.uid == selfPlayer.uid,
+          pendingDelta: _pendingDelta(player, gameState),
+          onConfirmPayment: _canConfirmPayment(player, gameState, selfUid)
+              ? () => _confirmPayment(context, player.uid!)
+              : null,
         );
       }
     }
@@ -125,6 +133,33 @@ class InGamePage extends StatelessWidget {
       kyotaku: kyotaku,
     );
     return positions;
+  }
+
+  int? _pendingDelta(GamePlayer player, GameState? state) {
+    if (state == null || state.pendingWinnerUid == null || player.uid == null) return null;
+    if (player.uid == state.pendingWinnerUid) {
+      return state.pendingPayments.values.fold<int>(0, (sum, amount) => sum + amount);
+    }
+    final amount = state.pendingPayments[player.uid];
+    return amount == null ? null : -amount;
+  }
+
+  bool _canConfirmPayment(GamePlayer player, GameState? state, String? selfUid) =>
+      state != null &&
+      player.uid != null &&
+      player.uid == selfUid &&
+      state.pendingWinnerUid != null &&
+      state.pendingPayments.containsKey(player.uid);
+
+  Future<void> _confirmPayment(BuildContext context, String payerUid) async {
+    try {
+      if (tableId == null) throw StateError('卓情報を取得できません。');
+      await _repository.confirmScorePayment(tableId!);
+    } catch (error) {
+      if (!context.mounted) return;
+      final message = error is StateError ? error.message.toString() : '点数支払の確定に失敗しました。';
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    }
   }
 
   Widget _buildPage(BuildContext context, GameState? gameState) {
@@ -269,7 +304,20 @@ class InGamePage extends StatelessWidget {
                                 required int yakumanMultiplier,
                                 required int honba,
                               }) async {
-                                _showAction(context, '点数請求の保存');
+                                if (tableId == null) throw StateError('卓情報を取得できません。');
+                                final payments = <String, int>{
+                                  for (final player in displayPlayers)
+                                    if (player.uid != null && player.uid != selfPlayer.uid)
+                                      player.uid!: isTsumo
+                                          ? (player.isDealer ? dealerPayment : nonDealerPayment)
+                                          : ronPoints,
+                                };
+                                await _repository.createScoreRequest(
+                                  tableId!,
+                                  winnerUid: selfPlayer.uid!,
+                                  payments: payments,
+                                  isTsumo: isTsumo,
+                                );
                               },
                             ),
                       riichiActive: selfPlayer?.isRiichi ?? false,
@@ -357,11 +405,13 @@ class _GameInfoBar extends StatelessWidget {
 }
 
 class _PlayerPanel extends StatelessWidget {
-  const _PlayerPanel({required this.player, required this.startingPoints, this.isSelf = false});
+  const _PlayerPanel({required this.player, required this.startingPoints, this.isSelf = false, this.pendingDelta, this.onConfirmPayment});
 
   final GamePlayer? player;
   final int startingPoints;
   final bool isSelf;
+  final int? pendingDelta;
+  final VoidCallback? onConfirmPayment;
 
   String _format(int value) =>
       value.toString().replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (_) => ',');
@@ -370,7 +420,12 @@ class _PlayerPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     if (player == null) return const SizedBox.shrink();
     final diff = player!.score - startingPoints;
-    return Container(
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onConfirmPayment,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
       padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 5),
       decoration: BoxDecoration(
         color: const Color(0xE6193828),
@@ -415,6 +470,15 @@ class _PlayerPanel extends StatelessWidget {
             child: Text(_format(player!.score),
                 style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900)),
           ),
+          if (pendingDelta != null)
+            Text(
+              '${pendingDelta! >= 0 ? '+' : ''}${_format(pendingDelta!)}点',
+              style: TextStyle(
+                color: pendingDelta! >= 0 ? const Color(0xFF73D69A) : const Color(0xFFFF9992),
+                fontSize: 11,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
           Text(
             '${diff >= 0 ? '+' : ''}${_format(diff)}',
             style: TextStyle(
@@ -434,6 +498,8 @@ class _PlayerPanel extends StatelessWidget {
             ],
           ),
         ],
+      ),
+        ),
       ),
     );
   }
@@ -545,7 +611,7 @@ class _ActionDockState extends State<_ActionDock> {
     const actions = [
       _ActionItem('リーチ', '1,000点供託', Icons.bolt, Color(0xFFB97719)),
       _ActionItem('和了', '和了点請求', Icons.sports_martial_arts, Color(0xFFB9443D)),
-      _ActionItem('点棒移動', '沖和・特殊精算', Icons.swap_horiz, Color(0xFF347BA5)),
+      _ActionItem('点数支払', '支払の確定', Icons.swap_horiz, Color(0xFF347BA5)),
       _ActionItem('流局', 'ノーテン罰符', Icons.autorenew, Color(0xFF526477)),
       _ActionItem('次局へ', '局・親更新', Icons.skip_next, Color(0xFF39865B)),
       _ActionItem('精算', '対局終了', Icons.flag_outlined, Color(0xFF80509A)),
