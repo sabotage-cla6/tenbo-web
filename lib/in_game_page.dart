@@ -38,7 +38,7 @@ class InGamePage extends StatelessWidget {
   final Stream<GameState>? gameStateStream;
   final TableRepository? repository;
   final Future<void> Function()? onRiichi;
-  final Future<void> Function({required bool isTsumo, required int ronPoints, required int dealerPayment, required int nonDealerPayment, required int yakumanMultiplier, required int honba})? onScoreRequest;
+  final Future<void> Function({required bool isDealer, required bool isTsumo, required int ronPoints, required int dealerPayment, required int nonDealerPayment, required int yakumanMultiplier, required int honba})? onScoreRequest;
 
   TableRepository get _repository => repository ??
       (throw StateError('対局画面にはTableRepositoryの指定が必要です。'));
@@ -262,6 +262,7 @@ class InGamePage extends StatelessWidget {
                               onComplete: onComplete,
                               onRequest: onScoreRequest ?? ({
                                 required bool isTsumo,
+                                required bool isDealer,
                                 required int ronPoints,
                                 required int dealerPayment,
                                 required int nonDealerPayment,
