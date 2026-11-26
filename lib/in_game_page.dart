@@ -185,10 +185,25 @@ class InGamePage extends StatelessWidget {
   Widget _buildPage(BuildContext context, GameState? gameState) {
     final displayPlayers = players.map((player) {
       final state = player.uid == null ? null : gameState?.players[player.uid];
+      var currentWind = player.wind;
+      if (player.uid != null && gameState != null) {
+        for (final entry in gameState.seats.entries) {
+          if (entry.value == player.uid) {
+            currentWind = switch (entry.key) {
+              'east' => '東',
+              'south' => '南',
+              'west' => '西',
+              'north' => '北',
+              _ => player.wind,
+            };
+            break;
+          }
+        }
+      }
       return GamePlayer(
-        uid: player.uid, wind: player.wind, name: player.name,
+        uid: player.uid, wind: currentWind, name: player.name,
         score: state?.score ?? player.score,
-        isDealer: player.isDealer,
+        isDealer: gameState?.seats.isNotEmpty == true ? currentWind == '東' : player.isDealer,
         isRiichi: state?.isRiichi ?? player.isRiichi,
         isYakitori: player.isYakitori,
       );
