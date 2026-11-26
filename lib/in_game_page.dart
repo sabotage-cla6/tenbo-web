@@ -82,6 +82,9 @@ class InGamePage extends StatelessWidget {
     required String round,
     required int honba,
     required int kyotaku,
+    required BuildContext context,
+    required GameState? gameState,
+    required String? selfUid,
   }) {
     final positions = List<Widget>.filled(9, const SizedBox.shrink());
 
@@ -138,7 +141,9 @@ class InGamePage extends StatelessWidget {
   int? _pendingDelta(GamePlayer player, GameState? state) {
     if (state == null || state.pendingWinnerUid == null || player.uid == null) return null;
     if (player.uid == state.pendingWinnerUid) {
-      return state.pendingPayments.values.fold<int>(0, (sum, amount) => sum + amount);
+      return state.pendingIsTsumo
+          ? state.pendingPayments.values.fold<int>(0, (sum, amount) => sum + amount)
+          : state.pendingPayments.values.first;
     }
     final amount = state.pendingPayments[player.uid];
     return amount == null ? null : -amount;
@@ -271,6 +276,9 @@ class InGamePage extends StatelessWidget {
                                       round: displayRound,
                                       honba: displayHonba,
                                       kyotaku: displayKyotaku,
+                                      context: context,
+                                      gameState: gameState,
+                                      selfUid: selfUid,
                                     ),
                                   ),
                                 ),
