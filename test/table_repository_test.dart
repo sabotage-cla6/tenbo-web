@@ -434,4 +434,74 @@ void main() {
       verifyNever(store.chooseDealer(any, any, any));
     });
   });
+
+
+
+
+  group('TableRepository.advanceRound', () {
+    test('ログイン中の対局者として次局への進行をStoreへ依頼する', () async {
+      await repository.advanceRound('table-123');
+      verify(store.advanceRound('table-123', 'user-123')).called(1);
+    });
+
+    test('未ログインなら次局への進行を依頼しない', () async {
+      when(auth.currentUser).thenReturn(null);
+      await expectLater(
+        repository.advanceRound('table-123'),
+        throwsA(isA<StateError>()),
+      );
+      verifyNever(store.advanceRound(any, any));
+    });
+  });
+
+  group('GameState.fromMap', () {
+    test('和了後の局進行待ち状態を読み取る', () {
+      final state = GameState.fromMap({
+        'round': {'wind': 'south', 'number': 4, 'honba': 0, 'seq': 1},
+        'kyotakuSticks': 0,
+        'players': {},
+        'roundAdvance': {'winnerUid': 'winner', 'dealerContinues': false},
+        'seats': {'east': 'A', 'south': 'B', 'west': 'C', 'north': 'D'},
+      });
+
+      expect(state.hasPendingRoundAdvance, isTrue);
+      expect(state.round.wind, 'south');
+      expect(state.round.number, 4);
+      expect(state.seats['east'], 'A');
+      expect(state.seats['north'], 'D');
+    });
+
+    test('局進行待ち情報がなければ次局へ進めない状態にする', () {
+      final state = GameState.fromMap({
+        'round': {'wind': 'east', 'number': 1, 'honba': 0, 'seq': 1},
+        'kyotakuSticks': 0,
+        'players': {},
+      });
+
+      expect(state.hasPendingRoundAdvance, isFalse);
+    });
+  });
+
+  group('RoundProgression', () {
+    const seats4p = {'east': 'A', 'south': 'B', 'west': 'C', 'north': 'D'};
+    test('親の和了なら局と座席を維持して本場を増やす', () {
+      final next = RoundProgression.next(currentRound: {'wind': 'east', 'number': 1, 'honba': 2, 'seq': 1}, currentSeats: seats4p, playerCount: 4, dealerContinues: true);
+      expect(next['round'], {'wind': 'east', 'number': 1, 'honba': 3, 'seq': 1});
+      expect(next['seats'], seats4p);
+    });
+    test('子の和了なら局と座席を1つ進める', () {
+      final next = RoundProgression.next(currentRound: {'wind': 'east', 'number': 1, 'honba': 2, 'seq': 1}, currentSeats: seats4p, playerCount: 4, dealerContinues: false);
+      expect(next['round'], {'wind': 'east', 'number': 2, 'honba': 0, 'seq': 1});
+      expect(next['seats'], {'east': 'B', 'south': 'C', 'west': 'D', 'north': 'A'});
+    });
+    test('南4局の次は西1局へ進む', () {
+      final next = RoundProgression.next(currentRound: {'wind': 'south', 'number': 4, 'honba': 1, 'seq': 1}, currentSeats: seats4p, playerCount: 4, dealerContinues: false);
+      expect(next['round'], {'wind': 'west', 'number': 1, 'honba': 0, 'seq': 1});
+    });
+    test('三麻は3局ごとに場を進め、3人の座席を回す', () {
+      final next = RoundProgression.next(currentRound: {'wind': 'east', 'number': 3, 'honba': 0, 'seq': 1}, currentSeats: {'east': 'A', 'south': 'B', 'west': 'C', 'north': null}, playerCount: 3, dealerContinues: false);
+      expect(next['round'], {'wind': 'south', 'number': 1, 'honba': 0, 'seq': 1});
+      expect(next['seats'], {'east': 'B', 'south': 'C', 'west': 'A', 'north': null});
+    });
+  });
 }

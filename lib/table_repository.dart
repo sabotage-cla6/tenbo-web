@@ -17,13 +17,45 @@ class GameRound {
     seq: (data['seq'] as num?)?.toInt() ?? 1,
   );
 }
+/// 和了後に「次局へ」を押したときの局・座席進行ロジック。
+class RoundProgression {
+  static Map<String, dynamic> next({
+    required Map<String, dynamic> currentRound,
+    required Map<String, dynamic> currentSeats,
+    required int playerCount,
+    required bool dealerContinues,
+  }) {
+    final round = Map<String, dynamic>.from(currentRound);
+    final seats = <String, dynamic>{'east': currentSeats['east'], 'south': currentSeats['south'], 'west': currentSeats['west'], 'north': currentSeats['north']};
+    if (dealerContinues) {
+      round['honba'] = ((round['honba'] as num?)?.toInt() ?? 0) + 1;
+    } else {
+      const winds = ['east', 'south', 'west', 'north'];
+      final wind = round['wind'] as String? ?? 'east';
+      final windIndex = winds.indexOf(wind);
+      if (windIndex < 0) throw StateError('場の情報が不正です。');
+      final number = (round['number'] as num?)?.toInt() ?? 1;
+      final maxNumber = playerCount == 3 ? 3 : 4;
+      if (number < 1 || number > maxNumber) throw StateError('局番号の情報が不正です。');
+      if (number < maxNumber) { round['number'] = number + 1; }
+      else { round['number'] = 1; round['wind'] = winds[(windIndex + 1) % winds.length]; }
+      round['honba'] = 0;
+      final previous = Map<String, dynamic>.from(seats);
+      seats['east'] = previous['south'];
+      seats['south'] = previous['west'];
+      seats['west'] = playerCount == 3 ? previous['east'] : previous['north'];
+      seats['north'] = playerCount == 3 ? null : previous['east'];
+    }
+    return {'round': round, 'seats': seats};
+  }
+}
 class GamePlayerState {
   const GamePlayerState({required this.score, required this.isRiichi});
   final int score;
   final bool isRiichi;
 }
 class GameState {
-  const GameState({required this.round, required this.kyotakuSticks, required this.players, this.pendingWinnerUid, this.pendingPayments = const {}, this.pendingIsTsumo = false, this.pendingKyotaku = 0});
+  const GameState({required this.round, required this.kyotakuSticks, required this.players, this.pendingWinnerUid, this.pendingPayments = const {}, this.pendingIsTsumo = false, this.pendingKyotaku = 0, this.hasPendingRoundAdvance = false, this.seats = const {}});
   final GameRound round;
   final int kyotakuSticks;
   final Map<String, GamePlayerState> players;
@@ -32,6 +64,9 @@ class GameState {
   final Map<String, int> pendingPayments;
   final bool pendingIsTsumo;
   final int pendingKyotaku;
+  final bool hasPendingRoundAdvance;
+  /// 現在の風に割り当てられているプレイヤーUID。
+  final Map<String, String?> seats;
   factory GameState.fromMap(Map<String, dynamic> data) {
     final rawRound = data['round'];
     final rawPlayers = data['players'];
@@ -43,6 +78,12 @@ class GameState {
       pendingKyotaku: data['pendingSettlement'] is Map
           ? (((data['pendingSettlement'] as Map)['kyotakuAmount'] as num?)?.toInt() ?? 0)
           : 0,
+      hasPendingRoundAdvance: data['roundAdvance'] is Map,
+      seats: {
+        if (data['seats'] is Map)
+          for (final entry in (data['seats'] as Map).entries)
+            entry.key.toString(): entry.value as String?,
+      },
       pendingPayments: {
         if (data['pendingSettlement'] is Map && (data['pendingSettlement'] as Map)['payments'] is Map)
           for (final entry in ((data['pendingSettlement'] as Map)['payments'] as Map).entries)
@@ -151,6 +192,7 @@ abstract interface class TableStore {
   Future<void> createScoreRequest(String tableId, String winnerUid, Map<String, int> payments, bool isTsumo, int kyotakuAmount);
   Future<void> cancelScoreRequest(String tableId, String winnerUid);
   Future<void> confirmScorePayment(String tableId, String payerUid);
+  Future<void> advanceRound(String tableId, String uid);
   Future<void> startGame(String tableId, String uid);
   Future<void> assignSeat(String tableId, String wind, String uid);
   Future<void> randomizeSeats(String tableId, int playerCount, String uid);
@@ -296,9 +338,13 @@ class FirestoreTableStore implements TableStore {
   @override
   Stream<GameState> watchGameState(String tableId) {
     return _firestore.collection('tables').doc(tableId).snapshots().map((snapshot) {
-      final rawGame = snapshot.data()?['game'];
+      final tableData = snapshot.data();
+      final rawGame = tableData?['game'];
       if (rawGame is! Map) throw StateError('対局情報を取得できません。');
-      return GameState.fromMap(Map<String, dynamic>.from(rawGame));
+      return GameState.fromMap({
+        ...Map<String, dynamic>.from(rawGame),
+        'seats': tableData?['seats'],
+      });
     });
   }
   @override
@@ -352,8 +398,10 @@ class FirestoreTableStore implements TableStore {
       if (gameRaw is! Map) throw StateError('対局情報を取得できません。');
       final game = Map<String, dynamic>.from(gameRaw);
       final playersRaw = game['players'];
+      final seatsRaw = data?['seats'];
       if (playersRaw is! Map || !playersRaw.containsKey(winnerUid)) throw StateError('和了者の情報を取得できません。');
-      if (game['pendingSettlement'] is Map) throw StateError('前の点数支払が完了していません。');
+      if (seatsRaw is! Map || !seatsRaw.values.contains(winnerUid)) throw StateError('和了者の座席情報を取得できません。');
+      if (game['pendingSettlement'] is Map || game['roundAdvance'] is Map) throw StateError('前の局の処理が完了していません。');
       final normalizedPayments = <String, int>{};
       for (final entry in payments.entries) {
         if (entry.key == winnerUid || !playersRaw.containsKey(entry.key) || entry.value <= 0) continue;
@@ -365,6 +413,11 @@ class FirestoreTableStore implements TableStore {
         'isTsumo': isTsumo,
         'payments': normalizedPayments,
         'kyotakuAmount': kyotakuAmount,
+      };
+      // 和了時点の親子関係を保持し、支払完了後の「次局へ」で利用する。
+      game['roundAdvance'] = {
+        'winnerUid': winnerUid,
+        'dealerContinues': seatsRaw['east'] == winnerUid,
       };
       transaction.update(tableRef, {'game': game, 'updatedAt': FieldValue.serverTimestamp()});
     });
@@ -388,6 +441,7 @@ class FirestoreTableStore implements TableStore {
         throw StateError('自分が登録した点数請求だけを取り消せます。');
       }
       game.remove('pendingSettlement');
+      game.remove('roundAdvance');
       transaction.update(tableRef, {'game': game, 'updatedAt': FieldValue.serverTimestamp()});
     });
   }
@@ -444,6 +498,65 @@ class FirestoreTableStore implements TableStore {
         game['kyotakuSticks'] = 0;
       }
       transaction.update(tableRef, {'game': game, 'updatedAt': FieldValue.serverTimestamp()});
+    });
+  }
+
+  @override
+  Future<void> advanceRound(String tableId, String uid) async {
+    final tableRef = _firestore.collection('tables').doc(tableId);
+    final memberRef = tableRef.collection('members').doc(uid);
+    await _firestore.runTransaction((transaction) async {
+      final snapshot = await transaction.get(tableRef);
+      final memberSnapshot = await transaction.get(memberRef);
+      final data = snapshot.data();
+      if (!snapshot.exists || data?['status'] != 'playing') {
+        throw StateError('対局中の卓が見つかりません。');
+      }
+      if (!memberSnapshot.exists) throw StateError('卓の参加者だけが次局へ進められます。');
+      final rawSeats = data?['seats'];
+      final rawGame = data?['game'];
+      if (rawSeats is! Map || !rawSeats.values.contains(uid) || rawGame is! Map) {
+        throw StateError('対局情報を取得できません。');
+      }
+      final game = Map<String, dynamic>.from(rawGame);
+      if (game['pendingSettlement'] is Map) {
+        throw StateError('点数の支払が完了してから次局へ進んでください。');
+      }
+      final advanceRaw = game['roundAdvance'];
+      if (advanceRaw is! Map || advanceRaw['dealerContinues'] is! bool) {
+        throw StateError('次局へ進める和了結果がありません。');
+      }
+      final roundRaw = game['round'];
+      if (roundRaw is! Map) throw StateError('局情報を取得できません。');
+      final next = RoundProgression.next(
+        currentRound: Map<String, dynamic>.from(roundRaw),
+        currentSeats: Map<String, dynamic>.from(rawSeats),
+        playerCount: (data?['playerCount'] as num?)?.toInt() ?? 4,
+        dealerContinues: advanceRaw['dealerContinues'] as bool,
+      );
+      game['round'] = next['round'];
+      game.remove('roundAdvance');
+
+      // 次局へ進む際、前局のリーチ表示を全員分解除する。
+      // 供託点（kyotakuSticks）と持ち点（score）は次局へ引き継ぐ。
+      final rawPlayers = game['players'];
+      if (rawPlayers is Map) {
+        final players = Map<String, dynamic>.from(rawPlayers);
+        for (final entry in players.entries) {
+          if (entry.value is Map) {
+            final player = Map<String, dynamic>.from(entry.value as Map);
+            player['isRiichi'] = false;
+            players[entry.key] = player;
+          }
+        }
+        game['players'] = players;
+      }
+
+      transaction.update(tableRef, {
+        'seats': next['seats'],
+        'game': game,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
     });
   }
 
@@ -795,6 +908,12 @@ class TableRepository {
     final uid = currentUserUid;
     if (uid == null) throw StateError('点数を支払うにはログインが必要です。');
     await _store.confirmScorePayment(tableId, uid);
+  }
+
+  Future<void> advanceRound(String tableId) async {
+    final uid = currentUserUid;
+    if (uid == null) throw StateError('次局へ進むにはログインが必要です。');
+    await _store.advanceRound(tableId, uid);
   }
 
   Future<void> toggleRiichi(String tableId) async {

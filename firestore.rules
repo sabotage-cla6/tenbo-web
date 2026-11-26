@@ -184,8 +184,11 @@ service cloud.firestore {
                 || resource.data.seats.get('north', null) == request.auth.uid
               )
               && resource.data.game.get('pendingSettlement', null) == null
-              && request.resource.data.game.diff(resource.data.game).affectedKeys().hasOnly(['pendingSettlement'])
+              && resource.data.game.get('roundAdvance', null) == null
+              && request.resource.data.game.diff(resource.data.game).affectedKeys().hasOnly(['pendingSettlement', 'roundAdvance'])
               && request.resource.data.game.pendingSettlement.winnerUid == request.auth.uid
+              && request.resource.data.game.roundAdvance.winnerUid == request.auth.uid
+              && request.resource.data.game.roundAdvance.dealerContinues == (resource.data.seats.get('east', null) == request.auth.uid)
               && request.resource.data.game.pendingSettlement.isTsumo is bool
               && request.resource.data.game.pendingSettlement.kyotakuAmount == resource.data.game.kyotakuSticks * 1000
               && request.resource.data.game.pendingSettlement.payments.size() > 0
@@ -203,8 +206,9 @@ service cloud.firestore {
               && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['game', 'updatedAt'])
               && exists(/databases/$(database)/documents/tables/$(tableId)/members/$(request.auth.uid))
               && resource.data.game.pendingSettlement.winnerUid == request.auth.uid
-              && request.resource.data.game.diff(resource.data.game).affectedKeys().hasOnly(['pendingSettlement'])
+              && request.resource.data.game.diff(resource.data.game).affectedKeys().hasOnly(['pendingSettlement', 'roundAdvance'])
               && request.resource.data.game.get('pendingSettlement', null) == null
+              && request.resource.data.game.get('roundAdvance', null) == null
             )
             || (
               // 支払者本人が自分の支払額だけを確定し、和了者の点数へ加算する。
@@ -263,6 +267,87 @@ service cloud.firestore {
                 || (
                   resource.data.game.pendingSettlement.isTsumo == false
                   && request.resource.data.game.get('pendingSettlement', null) == null
+                )
+              )
+            )
+            || (
+              // 支払完了後は、着席中の誰でも「次局へ」を実行できる。
+              resource.data.status == 'playing'
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['seats', 'game', 'updatedAt'])
+              && exists(/databases/$(database)/documents/tables/$(tableId)/members/$(request.auth.uid))
+              && (
+                resource.data.seats.get('east', null) == request.auth.uid
+                || resource.data.seats.get('south', null) == request.auth.uid
+                || resource.data.seats.get('west', null) == request.auth.uid
+                || resource.data.seats.get('north', null) == request.auth.uid
+              )
+              && resource.data.game.get('pendingSettlement', null) == null
+              && resource.data.game.roundAdvance is map
+              && request.resource.data.game.diff(resource.data.game).affectedKeys().hasOnly(['round', 'roundAdvance', 'players'])
+              && request.resource.data.game.get('roundAdvance', null) == null
+              // 次局開始時は全員のリーチ状態を解除するが、持ち点は変更しない。
+              && request.resource.data.game.players.diff(resource.data.game.players).affectedKeys().hasOnly([
+                resource.data.seats.get('east', null),
+                resource.data.seats.get('south', null),
+                resource.data.seats.get('west', null),
+                resource.data.seats.get('north', null)
+              ])
+              && request.resource.data.game.players[resource.data.seats.east].isRiichi == false
+              && request.resource.data.game.players[resource.data.seats.east].diff(resource.data.game.players[resource.data.seats.east]).affectedKeys().hasOnly(['isRiichi'])
+              && request.resource.data.game.players[resource.data.seats.east].score == resource.data.game.players[resource.data.seats.east].score
+              && request.resource.data.game.players[resource.data.seats.south].isRiichi == false
+              && request.resource.data.game.players[resource.data.seats.south].diff(resource.data.game.players[resource.data.seats.south]).affectedKeys().hasOnly(['isRiichi'])
+              && request.resource.data.game.players[resource.data.seats.south].score == resource.data.game.players[resource.data.seats.south].score
+              && request.resource.data.game.players[resource.data.seats.west].isRiichi == false
+              && request.resource.data.game.players[resource.data.seats.west].diff(resource.data.game.players[resource.data.seats.west]).affectedKeys().hasOnly(['isRiichi'])
+              && request.resource.data.game.players[resource.data.seats.west].score == resource.data.game.players[resource.data.seats.west].score
+              && (
+                resource.data.playerCount == 3
+                || (
+                  request.resource.data.game.players[resource.data.seats.north].isRiichi == false
+                  && request.resource.data.game.players[resource.data.seats.north].diff(resource.data.game.players[resource.data.seats.north]).affectedKeys().hasOnly(['isRiichi'])
+                  && request.resource.data.game.players[resource.data.seats.north].score == resource.data.game.players[resource.data.seats.north].score
+                )
+              )
+              && (
+                (
+                  resource.data.game.roundAdvance.dealerContinues == true
+                  && request.resource.data.seats == resource.data.seats
+                  && request.resource.data.game.round.wind == resource.data.game.round.wind
+                  && request.resource.data.game.round.number == resource.data.game.round.number
+                  && request.resource.data.game.round.honba == resource.data.game.round.honba + 1
+                  && request.resource.data.game.round.seq == resource.data.game.round.seq
+                )
+                || (
+                  resource.data.game.roundAdvance.dealerContinues == false
+                  && request.resource.data.seats.east == resource.data.seats.south
+                  && request.resource.data.seats.south == resource.data.seats.west
+                  && request.resource.data.seats.west == (
+                    resource.data.playerCount == 3
+                      ? resource.data.seats.east
+                      : resource.data.seats.north
+                  )
+                  && request.resource.data.seats.north == (
+                    resource.data.playerCount == 3 ? null : resource.data.seats.east
+                  )
+                  && request.resource.data.game.round.honba == 0
+                  && request.resource.data.game.round.seq == resource.data.game.round.seq
+                  && (
+                    (
+                      resource.data.game.round.number < (resource.data.playerCount == 3 ? 3 : 4)
+                      && request.resource.data.game.round.wind == resource.data.game.round.wind
+                      && request.resource.data.game.round.number == resource.data.game.round.number + 1
+                    )
+                    || (
+                      resource.data.game.round.number == (resource.data.playerCount == 3 ? 3 : 4)
+                      && request.resource.data.game.round.number == 1
+                      && request.resource.data.game.round.wind == (
+                        resource.data.game.round.wind == 'east' ? 'south' :
+                        resource.data.game.round.wind == 'south' ? 'west' :
+                        resource.data.game.round.wind == 'west' ? 'north' : 'east'
+                      )
+                    )
+                  )
                 )
               )
             )

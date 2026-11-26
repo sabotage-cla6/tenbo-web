@@ -302,6 +302,41 @@ void main() {
       expect(find.text('点数・役の選択'), findsNothing);
     });
 
+    testWidgets('支払完了後に次局へを押すとRepositoryへ進行を依頼する', (tester) async {
+      final repository = MockTableRepository();
+      when(repository.watchGameState('table-123')).thenAnswer((_) => Stream.value(
+        const GameState(
+          round: GameRound(wind: 'south', number: 4, honba: 0, seq: 1),
+          kyotakuSticks: 0,
+          players: {
+            'south-uid': GamePlayerState(score: 25000, isRiichi: false),
+          },
+          hasPendingRoundAdvance: true,
+        ),
+      ));
+      when(repository.advanceRound('table-123')).thenAnswer((_) async {});
+
+      await tester.pumpWidget(MaterialApp(
+        home: InGamePage(
+          tableName: '次局進行テスト卓',
+          players: const [
+            GamePlayer(uid: 'south-uid', wind: '南', name: '自分', score: 25000),
+          ],
+          tableId: 'table-123',
+          currentUserUid: 'south-uid',
+          repository: repository,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      final nextButton = find.text('次局へ');
+      await tester.ensureVisible(nextButton);
+      await tester.tap(nextButton);
+      await tester.pumpAndSettle();
+
+      verify(repository.advanceRound('table-123')).called(1);
+    });
+
     testWidgets('操作ボタンは未実装であることを案内する', (tester) async {
       await tester.pumpWidget(buildPage());
 
