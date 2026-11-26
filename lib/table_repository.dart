@@ -55,7 +55,7 @@ class GamePlayerState {
   final bool isRiichi;
 }
 class GameState {
-  const GameState({required this.round, required this.kyotakuSticks, required this.players, this.pendingWinnerUid, this.pendingPayments = const {}, this.pendingIsTsumo = false, this.pendingKyotaku = 0, this.hasPendingRoundAdvance = false});
+  const GameState({required this.round, required this.kyotakuSticks, required this.players, this.pendingWinnerUid, this.pendingPayments = const {}, this.pendingIsTsumo = false, this.pendingKyotaku = 0, this.hasPendingRoundAdvance = false, this.seats = const {}});
   final GameRound round;
   final int kyotakuSticks;
   final Map<String, GamePlayerState> players;
@@ -65,6 +65,8 @@ class GameState {
   final bool pendingIsTsumo;
   final int pendingKyotaku;
   final bool hasPendingRoundAdvance;
+  /// 現在の風に割り当てられているプレイヤーUID。
+  final Map<String, String?> seats;
   factory GameState.fromMap(Map<String, dynamic> data) {
     final rawRound = data['round'];
     final rawPlayers = data['players'];
@@ -77,6 +79,11 @@ class GameState {
           ? (((data['pendingSettlement'] as Map)['kyotakuAmount'] as num?)?.toInt() ?? 0)
           : 0,
       hasPendingRoundAdvance: data['roundAdvance'] is Map,
+      seats: {
+        if (data['seats'] is Map)
+          for (final entry in (data['seats'] as Map).entries)
+            entry.key.toString(): entry.value as String?,
+      },
       pendingPayments: {
         if (data['pendingSettlement'] is Map && (data['pendingSettlement'] as Map)['payments'] is Map)
           for (final entry in ((data['pendingSettlement'] as Map)['payments'] as Map).entries)
@@ -331,9 +338,13 @@ class FirestoreTableStore implements TableStore {
   @override
   Stream<GameState> watchGameState(String tableId) {
     return _firestore.collection('tables').doc(tableId).snapshots().map((snapshot) {
-      final rawGame = snapshot.data()?['game'];
+      final tableData = snapshot.data();
+      final rawGame = tableData?['game'];
       if (rawGame is! Map) throw StateError('対局情報を取得できません。');
-      return GameState.fromMap(Map<String, dynamic>.from(rawGame));
+      return GameState.fromMap({
+        ...Map<String, dynamic>.from(rawGame),
+        'seats': tableData?['seats'],
+      });
     });
   }
   @override
