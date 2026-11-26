@@ -435,3 +435,45 @@ void main() {
     });
   });
 }
+
+
+  group('TableRepository.advanceRound', () {
+    test('ログイン中の対局者として次局への進行をStoreへ依頼する', () async {
+      await repository.advanceRound('table-123');
+      verify(store.advanceRound('table-123', 'user-123')).called(1);
+    });
+
+    test('未ログインなら次局への進行を依頼しない', () async {
+      when(auth.currentUser).thenReturn(null);
+      await expectLater(
+        repository.advanceRound('table-123'),
+        throwsA(isA<StateError>()),
+      );
+      verifyNever(store.advanceRound(any, any));
+    });
+  });
+
+  group('GameState.fromMap', () {
+    test('和了後の局進行待ち状態を読み取る', () {
+      final state = GameState.fromMap({
+        'round': {'wind': 'south', 'number': 4, 'honba': 0, 'seq': 1},
+        'kyotakuSticks': 0,
+        'players': {},
+        'roundAdvance': {'winnerUid': 'winner', 'dealerContinues': false},
+      });
+
+      expect(state.hasPendingRoundAdvance, isTrue);
+      expect(state.round.wind, 'south');
+      expect(state.round.number, 4);
+    });
+
+    test('局進行待ち情報がなければ次局へ進めない状態にする', () {
+      final state = GameState.fromMap({
+        'round': {'wind': 'east', 'number': 1, 'honba': 0, 'seq': 1},
+        'kyotakuSticks': 0,
+        'players': {},
+      });
+
+      expect(state.hasPendingRoundAdvance, isFalse);
+    });
+  });
