@@ -160,6 +160,17 @@ class InGamePage extends StatelessWidget {
       state.pendingWinnerUid != null &&
       state.pendingPayments.containsKey(player.uid);
 
+  Future<void> _advanceRound(BuildContext context) async {
+    try {
+      if (tableId == null) throw StateError('卓情報を取得できません。');
+      await _repository.advanceRound(tableId!);
+    } catch (error) {
+      if (!context.mounted) return;
+      final message = error is StateError ? error.message.toString() : '次局への進行に失敗しました。';
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    }
+  }
+
   Future<void> _confirmPayment(BuildContext context) async {
     try {
       if (tableId == null) throw StateError('卓情報を取得できません。');
@@ -298,6 +309,10 @@ class InGamePage extends StatelessWidget {
                           ? null
                           : () => _repository.cancelScoreRequest(tableId!),
                       onAction: (action) => _showAction(context, action),
+                      onNextRound: tableId != null && gameState != null &&
+                              gameState.pendingWinnerUid == null && gameState.hasPendingRoundAdvance
+                          ? () => _advanceRound(context)
+                          : null,
                       onWin: selfPlayer == null ? () => _showAction(context, '和了') : null,
                       scoreRequestBuilder: selfPlayer == null
                           ? null
@@ -584,6 +599,7 @@ class _ActionDock extends StatefulWidget {
     required this.onAction,
     this.onCancelScoreRequest,
     this.onWin,
+    this.onNextRound,
     this.scoreRequestBuilder,
     this.riichiActive = false,
     this.onRiichi,
@@ -592,6 +608,7 @@ class _ActionDock extends StatefulWidget {
   final ValueChanged<String> onAction;
   final Future<void> Function()? onCancelScoreRequest;
   final VoidCallback? onWin;
+  final VoidCallback? onNextRound;
   final Widget Function({
     required VoidCallback onCancel,
     required VoidCallback onComplete,
@@ -663,7 +680,8 @@ class _ActionDockState extends State<_ActionDock> {
         for (final action in actions)
           Material(
             color: (action.title == 'リーチ' && widget.onRiichi == null) ||
-                    (action.title == '和了' && widget.onWin == null && widget.scoreRequestBuilder == null)
+                    (action.title == '和了' && widget.onWin == null && widget.scoreRequestBuilder == null) ||
+                    (action.title == '次局へ' && widget.onNextRound == null)
                 ? Colors.grey
                 : action.color,
             borderRadius: BorderRadius.circular(12),
@@ -674,7 +692,9 @@ class _ActionDockState extends State<_ActionDock> {
                       ? widget.scoreRequestBuilder != null
                           ? _openScoreRequest
                           : widget.onWin
-                      : () => widget.onAction(action.title),
+                      : action.title == '次局へ'
+                          ? widget.onNextRound
+                          : () => widget.onAction(action.title),
               borderRadius: BorderRadius.circular(12),
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
