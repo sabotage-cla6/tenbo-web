@@ -293,15 +293,19 @@ service cloud.firestore {
                 resource.data.seats.get('north', null)
               ])
               && request.resource.data.game.players[resource.data.seats.east].isRiichi == false
+              && request.resource.data.game.players[resource.data.seats.east].diff(resource.data.game.players[resource.data.seats.east]).affectedKeys().hasOnly(['isRiichi'])
               && request.resource.data.game.players[resource.data.seats.east].score == resource.data.game.players[resource.data.seats.east].score
               && request.resource.data.game.players[resource.data.seats.south].isRiichi == false
+              && request.resource.data.game.players[resource.data.seats.south].diff(resource.data.game.players[resource.data.seats.south]).affectedKeys().hasOnly(['isRiichi'])
               && request.resource.data.game.players[resource.data.seats.south].score == resource.data.game.players[resource.data.seats.south].score
               && request.resource.data.game.players[resource.data.seats.west].isRiichi == false
+              && request.resource.data.game.players[resource.data.seats.west].diff(resource.data.game.players[resource.data.seats.west]).affectedKeys().hasOnly(['isRiichi'])
               && request.resource.data.game.players[resource.data.seats.west].score == resource.data.game.players[resource.data.seats.west].score
               && (
                 resource.data.playerCount == 3
                 || (
                   request.resource.data.game.players[resource.data.seats.north].isRiichi == false
+                  && request.resource.data.game.players[resource.data.seats.north].diff(resource.data.game.players[resource.data.seats.north]).affectedKeys().hasOnly(['isRiichi'])
                   && request.resource.data.game.players[resource.data.seats.north].score == resource.data.game.players[resource.data.seats.north].score
                 )
               )
