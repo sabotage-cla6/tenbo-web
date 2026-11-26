@@ -141,9 +141,10 @@ class InGamePage extends StatelessWidget {
   int? _pendingDelta(GamePlayer player, GameState? state) {
     if (state == null || state.pendingWinnerUid == null || player.uid == null) return null;
     if (player.uid == state.pendingWinnerUid) {
-      return state.pendingIsTsumo
+      final payments = state.pendingIsTsumo
           ? state.pendingPayments.values.fold<int>(0, (sum, amount) => sum + amount)
           : state.pendingPayments.values.first;
+      return payments + state.pendingKyotaku;
     }
     final amount = state.pendingPayments[player.uid];
     return amount == null ? null : -amount;
@@ -325,6 +326,7 @@ class InGamePage extends StatelessWidget {
                                   winnerUid: selfPlayer.uid!,
                                   payments: payments,
                                   isTsumo: isTsumo,
+                                  kyotakuAmount: displayKyotaku,
                                 );
                               },
                             ),
@@ -609,7 +611,20 @@ class _ActionDockState extends State<_ActionDock> {
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(8),
             child: widget.scoreRequestBuilder!(
-              onCancel: () => Navigator.of(dialogContext).pop(),
+              onCancel: () async {
+                try {
+                  await _repository.cancelScoreRequest(tableId!);
+                  if (dialogContext.mounted) Navigator.of(dialogContext).pop();
+                } catch (error) {
+                  if (!dialogContext.mounted) return;
+                  final message = error is StateError
+                      ? error.message.toString()
+                      : '点数請求の取消に失敗しました。';
+                  ScaffoldMessenger.of(dialogContext).showSnackBar(
+                    SnackBar(content: Text(message)),
+                  );
+                }
+              },
               onComplete: () => Navigator.of(dialogContext).pop(),
             ),
           ),
