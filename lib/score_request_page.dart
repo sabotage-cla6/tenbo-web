@@ -315,7 +315,9 @@ class _ScoreRequestPageState extends State<ScoreRequestPage> {
         String pointBtnLabel = '';
         // n倍役満
         if (row.yakumanMultiplier > 1) {
-          pointBtnLabel = '${row.yakumanMultiplier}倍役満';
+          pointBtnLabel = _selectedYakuman
+              ? '${_yakumanMultiplier}倍役満'
+              : '${row.yakumanMultiplier}倍役満';
           cell = _pointCell(
             label: pointBtnLabel,
             point: row,
