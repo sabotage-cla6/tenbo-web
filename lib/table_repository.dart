@@ -23,16 +23,27 @@ class GamePlayerState {
   final bool isRiichi;
 }
 class GameState {
-  const GameState({required this.round, required this.kyotakuSticks, required this.players});
+  const GameState({required this.round, required this.kyotakuSticks, required this.players, this.pendingWinnerUid, this.pendingPayments = const {}, this.pendingIsTsumo = false});
   final GameRound round;
   final int kyotakuSticks;
   final Map<String, GamePlayerState> players;
+  final String? pendingWinnerUid;
+  /// 支払者 UID ごとの未確定支払額（正の値）。
+  final Map<String, int> pendingPayments;
+  final bool pendingIsTsumo;
   factory GameState.fromMap(Map<String, dynamic> data) {
     final rawRound = data['round'];
     final rawPlayers = data['players'];
     return GameState(
       round: GameRound.fromMap(rawRound is Map ? Map<String, dynamic>.from(rawRound) : const {}),
       kyotakuSticks: (data['kyotakuSticks'] as num?)?.toInt() ?? 0,
+      pendingWinnerUid: data['pendingSettlement'] is Map ? (data['pendingSettlement'] as Map)['winnerUid'] as String? : null,
+      pendingIsTsumo: data['pendingSettlement'] is Map && (data['pendingSettlement'] as Map)['isTsumo'] == true,
+      pendingPayments: {
+        if (data['pendingSettlement'] is Map && (data['pendingSettlement'] as Map)['payments'] is Map)
+          for (final entry in ((data['pendingSettlement'] as Map)['payments'] as Map).entries)
+            entry.key.toString(): (entry.value as num).toInt(),
+      },
       players: {
         if (rawPlayers is Map)
           for (final entry in rawPlayers.entries)
@@ -133,6 +144,8 @@ abstract interface class TableStore {
   Stream<String> watchStatus(String tableId);
   Stream<GameState> watchGameState(String tableId);
   Future<void> toggleRiichi(String tableId, String uid);
+  Future<void> createScoreRequest(String tableId, String winnerUid, Map<String, int> payments, bool isTsumo);
+  Future<void> confirmScorePayment(String tableId, String payerUid);
   Future<void> startGame(String tableId, String uid);
   Future<void> assignSeat(String tableId, String wind, String uid);
   Future<void> randomizeSeats(String tableId, int playerCount, String uid);
@@ -323,6 +336,85 @@ class FirestoreTableStore implements TableStore {
       transaction.update(tableRef, {'game': game, 'updatedAt': FieldValue.serverTimestamp()});
     });
   }
+  @override
+  Future<void> createScoreRequest(String tableId, String winnerUid, Map<String, int> payments, bool isTsumo) async {
+    final tableRef = _firestore.collection('tables').doc(tableId);
+    await _firestore.runTransaction((transaction) async {
+      final snapshot = await transaction.get(tableRef);
+      final data = snapshot.data();
+      if (!snapshot.exists || data?['status'] != 'playing') throw StateError('対局中の卓が見つかりません。');
+      final gameRaw = data?['game'];
+      if (gameRaw is! Map) throw StateError('対局情報を取得できません。');
+      final game = Map<String, dynamic>.from(gameRaw);
+      final playersRaw = game['players'];
+      if (playersRaw is! Map || !playersRaw.containsKey(winnerUid)) throw StateError('和了者の情報を取得できません。');
+      if (game['pendingSettlement'] is Map) throw StateError('前の点数支払が完了していません。');
+      final normalizedPayments = <String, int>{};
+      for (final entry in payments.entries) {
+        if (entry.key == winnerUid || !playersRaw.containsKey(entry.key) || entry.value <= 0) continue;
+        normalizedPayments[entry.key] = entry.value;
+      }
+      if (normalizedPayments.isEmpty) throw StateError('支払対象のプレイヤーがいません。');
+      game['pendingSettlement'] = {
+        'winnerUid': winnerUid,
+        'isTsumo': isTsumo,
+        'payments': normalizedPayments,
+      };
+      transaction.update(tableRef, {'game': game, 'updatedAt': FieldValue.serverTimestamp()});
+    });
+  }
+
+  @override
+  Future<void> confirmScorePayment(String tableId, String payerUid) async {
+    final tableRef = _firestore.collection('tables').doc(tableId);
+    await _firestore.runTransaction((transaction) async {
+      final snapshot = await transaction.get(tableRef);
+      final data = snapshot.data();
+      if (!snapshot.exists || data?['status'] != 'playing') throw StateError('対局中の卓が見つかりません。');
+      final seats = data?['seats'];
+      if (seats is! Map || !seats.values.contains(payerUid)) throw StateError('対局者だけが点数を支払えます。');
+      final gameRaw = data?['game'];
+      if (gameRaw is! Map) throw StateError('対局情報を取得できません。');
+      final game = Map<String, dynamic>.from(gameRaw);
+      final settlementRaw = game['pendingSettlement'];
+      if (settlementRaw is! Map) throw StateError('確定待ちの点数請求はありません。');
+      final settlement = Map<String, dynamic>.from(settlementRaw);
+      final winnerUid = settlement['winnerUid'] as String?;
+      final isTsumo = settlement['isTsumo'] == true;
+      final paymentsRaw = settlement['payments'];
+      if (winnerUid == null || paymentsRaw is! Map || !paymentsRaw.containsKey(payerUid)) {
+        throw StateError('この支払は既に完了しているか、対象外です。');
+      }
+      final amount = (paymentsRaw[payerUid] as num).toInt();
+      final playersRaw = game['players'];
+      if (playersRaw is! Map || playersRaw[payerUid] is! Map || playersRaw[winnerUid] is! Map) {
+        throw StateError('プレイヤー情報を取得できません。');
+      }
+      final players = Map<String, dynamic>.from(playersRaw);
+      final payer = Map<String, dynamic>.from(players[payerUid] as Map);
+      final winner = Map<String, dynamic>.from(players[winnerUid] as Map);
+      payer['score'] = ((payer['score'] as num?)?.toInt() ?? 0) - amount;
+      winner['score'] = ((winner['score'] as num?)?.toInt() ?? 0) + amount;
+      players[payerUid] = payer;
+      players[winnerUid] = winner;
+      game['players'] = players;
+
+      if (isTsumo) {
+        final remaining = Map<String, dynamic>.from(paymentsRaw)..remove(payerUid);
+        if (remaining.isEmpty) {
+          game.remove('pendingSettlement');
+        } else {
+          settlement['payments'] = remaining;
+          game['pendingSettlement'] = settlement;
+        }
+      } else {
+        // ロンは最初に支払を確定した一人が全額を支払う。
+        game.remove('pendingSettlement');
+      }
+      transaction.update(tableRef, {'game': game, 'updatedAt': FieldValue.serverTimestamp()});
+    });
+  }
+
   @override
   Future<void> startGame(String tableId, String uid) async {
     final tableRef = _firestore.collection('tables').doc(tableId);
@@ -654,6 +746,19 @@ class TableRepository {
     if (_auth.currentUser == null) return Stream.error(StateError('対局情報を取得するにはログインが必要です。'));
     return _store.watchGameState(tableId);
   }
+  Future<void> createScoreRequest(String tableId, {required String winnerUid, required Map<String, int> payments, required bool isTsumo}) async {
+    final uid = currentUserUid;
+    if (uid == null) throw StateError('点数請求にはログインが必要です。');
+    if (uid != winnerUid) throw StateError('和了者本人だけが点数請求できます。');
+    await _store.createScoreRequest(tableId, winnerUid, payments, isTsumo);
+  }
+
+  Future<void> confirmScorePayment(String tableId) async {
+    final uid = currentUserUid;
+    if (uid == null) throw StateError('点数を支払うにはログインが必要です。');
+    await _store.confirmScorePayment(tableId, uid);
+  }
+
   Future<void> toggleRiichi(String tableId) async {
     final uid = currentUserUid;
     if (uid == null) throw StateError('リーチするにはログインが必要です。');
