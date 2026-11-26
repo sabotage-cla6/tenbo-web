@@ -351,6 +351,11 @@ class _ScoreRequestPageState extends State<ScoreRequestPage> {
               setState(() {
                 _selectedYakuman = false;
                 _selectedPoint = row;
+                _ronPoints = _isTsumo
+                    ? null
+                    : (_isDealer ? row.ronDealer : row.ronChild);
+                _dealerPayment = null;
+                _nonDealerPayment = null;
               });
             },
             emphasized: true,
