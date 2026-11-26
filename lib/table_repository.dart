@@ -17,6 +17,38 @@ class GameRound {
     seq: (data['seq'] as num?)?.toInt() ?? 1,
   );
 }
+/// 和了後に「次局へ」を押したときの局・座席進行ロジック。
+class RoundProgression {
+  static Map<String, dynamic> next({
+    required Map<String, dynamic> currentRound,
+    required Map<String, dynamic> currentSeats,
+    required int playerCount,
+    required bool dealerContinues,
+  }) {
+    final round = Map<String, dynamic>.from(currentRound);
+    final seats = <String, dynamic>{'east': currentSeats['east'], 'south': currentSeats['south'], 'west': currentSeats['west'], 'north': currentSeats['north']};
+    if (dealerContinues) {
+      round['honba'] = ((round['honba'] as num?)?.toInt() ?? 0) + 1;
+    } else {
+      const winds = ['east', 'south', 'west', 'north'];
+      final wind = round['wind'] as String? ?? 'east';
+      final windIndex = winds.indexOf(wind);
+      if (windIndex < 0) throw StateError('場の情報が不正です。');
+      final number = (round['number'] as num?)?.toInt() ?? 1;
+      final maxNumber = playerCount == 3 ? 3 : 4;
+      if (number < 1 || number > maxNumber) throw StateError('局番号の情報が不正です。');
+      if (number < maxNumber) { round['number'] = number + 1; }
+      else { round['number'] = 1; round['wind'] = winds[(windIndex + 1) % winds.length]; }
+      round['honba'] = 0;
+      final previous = Map<String, dynamic>.from(seats);
+      seats['east'] = previous['south'];
+      seats['south'] = previous['west'];
+      seats['west'] = playerCount == 3 ? previous['east'] : previous['north'];
+      seats['north'] = playerCount == 3 ? null : previous['east'];
+    }
+    return {'round': round, 'seats': seats};
+  }
+}
 class GamePlayerState {
   const GamePlayerState({required this.score, required this.isRiichi});
   final int score;
@@ -485,43 +517,16 @@ class FirestoreTableStore implements TableStore {
       }
       final roundRaw = game['round'];
       if (roundRaw is! Map) throw StateError('局情報を取得できません。');
-      final round = Map<String, dynamic>.from(roundRaw);
-      final seats = <String, dynamic>{
-        'east': rawSeats['east'],
-        'south': rawSeats['south'],
-        'west': rawSeats['west'],
-        'north': rawSeats['north'],
-      };
-      final playerCount = (data?['playerCount'] as num?)?.toInt() ?? 4;
-
-      if (advanceRaw['dealerContinues'] == true) {
-        round['honba'] = ((round['honba'] as num?)?.toInt() ?? 0) + 1;
-      } else {
-        const winds = ['east', 'south', 'west', 'north'];
-        final currentWind = round['wind'] as String? ?? 'east';
-        final windIndex = winds.indexOf(currentWind);
-        if (windIndex < 0) throw StateError('場の情報が不正です。');
-        final number = (round['number'] as num?)?.toInt() ?? 1;
-        final maxNumber = playerCount == 3 ? 3 : 4;
-        if (number < maxNumber) {
-          round['number'] = number + 1;
-        } else {
-          round['number'] = 1;
-          round['wind'] = winds[(windIndex + 1) % winds.length];
-        }
-        round['honba'] = 0;
-
-        final previous = Map<String, dynamic>.from(seats);
-        seats['east'] = previous['south'];
-        seats['south'] = previous['west'];
-        seats['west'] = playerCount == 3 ? previous['east'] : previous['north'];
-        seats['north'] = playerCount == 3 ? null : previous['east'];
-      }
-
-      game['round'] = round;
+      final next = RoundProgression.next(
+        currentRound: Map<String, dynamic>.from(roundRaw),
+        currentSeats: Map<String, dynamic>.from(rawSeats),
+        playerCount: (data?['playerCount'] as num?)?.toInt() ?? 4,
+        dealerContinues: advanceRaw['dealerContinues'] as bool,
+      );
+      game['round'] = next['round'];
       game.remove('roundAdvance');
       transaction.update(tableRef, {
-        'seats': seats,
+        'seats': next['seats'],
         'game': game,
         'updatedAt': FieldValue.serverTimestamp(),
       });
