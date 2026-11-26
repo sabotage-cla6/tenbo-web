@@ -186,7 +186,9 @@ service cloud.firestore {
               && resource.data.game.get('pendingSettlement', null) == null
               && request.resource.data.game.diff(resource.data.game).affectedKeys().hasOnly(['pendingSettlement'])
               && request.resource.data.game.pendingSettlement.winnerUid == request.auth.uid
+              && request.resource.data.game.pendingSettlement.isTsumo is bool
               && request.resource.data.game.pendingSettlement.payments.size() > 0
+              && !request.resource.data.game.pendingSettlement.payments.keys().hasAny([request.auth.uid])
               && request.resource.data.game.pendingSettlement.payments.keys().hasOnly([
                 resource.data.seats.get('east', null),
                 resource.data.seats.get('south', null),
