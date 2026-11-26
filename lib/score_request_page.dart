@@ -96,12 +96,9 @@ class _ScoreRequestPageState extends State<ScoreRequestPage> {
     Point(ronChild: 24000, ronDealer: 36000, tsumo: (6000, 12000)),
     // 役満
     Point(ronChild: 32000, ronDealer: 48000, tsumo: (8000, 16000)),
-    Point(
-      ronChild: 0,
-      ronDealer: 0,
-      tsumo: (8000, 16000),
-      yakumanMultiplier: 2,
-    ),
+    YakumanPoint(yakumanMultiplier: 1),
+    YakumanPoint(yakumanMultiplier: 2),
+    null,
     // 70符
     Point(ronChild: 2300, ronDealer: 3400, tsumo: (600, 1200)),
     Point(ronChild: 4500, ronDealer: 6800, tsumo: (1200, 2300)),
@@ -117,24 +114,6 @@ class _ScoreRequestPageState extends State<ScoreRequestPage> {
     RegExp(r'\B(?=(\d{3})+(?!\d))'),
     (_) => ',',
   );
-
-  void _selectRon(int points) {
-    setState(() {
-      _selectedYakuman = false;
-      _ronPoints = points;
-      _dealerPayment = null;
-      _nonDealerPayment = null;
-    });
-  }
-
-  void _selectTsumo((int, int) payment) {
-    setState(() {
-      _selectedYakuman = false;
-      _ronPoints = null;
-      _nonDealerPayment = payment.$1;
-      _dealerPayment = payment.$2;
-    });
-  }
 
   Widget _pointCell({
     required String label,
@@ -313,19 +292,40 @@ class _ScoreRequestPageState extends State<ScoreRequestPage> {
 
       if (row != null) {
         String pointBtnLabel = '';
-        // n倍役満
-        if (row.yakumanMultiplier > 1) {
-          pointBtnLabel = _selectedYakuman
-              ? '${_yakumanMultiplier}倍役満'
-              : '${row.yakumanMultiplier}倍役満';
+        // 役満
+        if( row is  YakumanPoint){
+          if(row.yakumanMultiplier > 1){
+            pointBtnLabel = _selectedYakuman
+                ? '${_yakumanMultiplier}倍役満'
+                : '${row.yakumanMultiplier}倍役満';
+            cell = _pointCell(
+              label: pointBtnLabel,
+              point: row,
+              selected:
+                  _selectedYakuman && 1 < _yakumanMultiplier,
+              onTap: () => _showYakumanMultiplierDialog(row),
+              emphasized: true,
+            );
+          } else {
+            pointBtnLabel = '役満';
           cell = _pointCell(
             label: pointBtnLabel,
             point: row,
-            selected:
-                _selectedYakuman,
-            onTap: () => _showYakumanMultiplierDialog(row),
+            selected: _selectedPoint == row,
+            onTap: () {
+              setState(() {
+                _selectedYakuman = false;
+                _selectedPoint = row;
+                _ronPoints = _isTsumo
+                    ? null
+                    : (_isDealer ? row.ronDealer : row.ronChild);
+                _dealerPayment = null;
+                _nonDealerPayment = null;
+              });
+            },
             emphasized: true,
           );
+          }
         }
         // それ以外
         else {
@@ -697,12 +697,22 @@ class Point {
   final int ronChild;
   final int ronDealer;
   final (int, int) tsumo;
-  final int yakumanMultiplier;
 
   const Point({
     required this.ronChild,
     required this.ronDealer,
     required this.tsumo,
-    this.yakumanMultiplier = 1,
   });
+}
+
+class YakumanPoint extends Point {
+  final int yakumanMultiplier;
+
+  const YakumanPoint({
+    required this.yakumanMultiplier,
+  }) : super(
+        ronChild: yakumanMultiplier * 32000,
+        ronDealer: yakumanMultiplier * 48000,
+        tsumo: (8000 * yakumanMultiplier, 16000 * yakumanMultiplier),
+      );
 }
