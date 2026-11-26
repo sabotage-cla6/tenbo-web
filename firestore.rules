@@ -184,6 +184,7 @@ service cloud.firestore {
                 || resource.data.seats.get('north', null) == request.auth.uid
               )
               && resource.data.game.get('pendingSettlement', null) == null
+              && resource.data.game.get('roundAdvance', null) == null
               && request.resource.data.game.diff(resource.data.game).affectedKeys().hasOnly(['pendingSettlement', 'roundAdvance'])
               && request.resource.data.game.pendingSettlement.winnerUid == request.auth.uid
               && request.resource.data.game.roundAdvance.winnerUid == request.auth.uid
@@ -286,6 +287,7 @@ service cloud.firestore {
                   && request.resource.data.game.round.wind == resource.data.game.round.wind
                   && request.resource.data.game.round.number == resource.data.game.round.number
                   && request.resource.data.game.round.honba == resource.data.game.round.honba + 1
+                  && request.resource.data.game.round.seq == resource.data.game.round.seq
                 )
                 || (
                   resource.data.game.roundAdvance.dealerContinues == false
@@ -300,6 +302,7 @@ service cloud.firestore {
                     resource.data.playerCount == 3 ? null : resource.data.seats.east
                   )
                   && request.resource.data.game.round.honba == 0
+                  && request.resource.data.game.round.seq == resource.data.game.round.seq
                   && (
                     (
                       resource.data.game.round.number < (resource.data.playerCount == 3 ? 3 : 4)
