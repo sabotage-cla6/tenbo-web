@@ -23,7 +23,7 @@ class GamePlayerState {
   final bool isRiichi;
 }
 class GameState {
-  const GameState({required this.round, required this.kyotakuSticks, required this.players, this.pendingWinnerUid, this.pendingPayments = const {}, this.pendingIsTsumo = false, this.pendingKyotaku = 0});
+  const GameState({required this.round, required this.kyotakuSticks, required this.players, this.pendingWinnerUid, this.pendingPayments = const {}, this.pendingIsTsumo = false, this.pendingKyotaku = 0, this.hasPendingRoundAdvance = false});
   final GameRound round;
   final int kyotakuSticks;
   final Map<String, GamePlayerState> players;
