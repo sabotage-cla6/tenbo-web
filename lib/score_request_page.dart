@@ -376,8 +376,10 @@ class _ScoreRequestPageState extends State<ScoreRequestPage> {
         isDealer: _isDealer,
         isTsumo: _isTsumo,
         ronPoints: _ronPoints ?? 0,
-        dealerPayment: _dealerPayment ?? 0,
-        nonDealerPayment: _nonDealerPayment ?? 0,
+        dealerPayment: _isTsumo && _selectedPoint != null ? _selectedPoint!.tsumo.$2 : 0,
+        nonDealerPayment: _isTsumo && _selectedPoint != null
+            ? (_isDealer ? _selectedPoint!.tsumo.$2 : _selectedPoint!.tsumo.$1)
+            : 0,
         yakumanMultiplier: _selectedYakuman ? _yakumanMultiplier : 1,
         honba: widget.honba,
       );
