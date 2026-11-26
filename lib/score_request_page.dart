@@ -348,7 +348,10 @@ class _ScoreRequestPageState extends State<ScoreRequestPage> {
             point: row,
             selected: _selectedPoint == row,
             onTap: () {
-              setState(() => _selectedPoint = row);
+              setState(() {
+                _selectedYakuman = false;
+                _selectedPoint = row;
+              });
             },
             emphasized: true,
           );
