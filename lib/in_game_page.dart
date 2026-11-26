@@ -146,6 +146,9 @@ class InGamePage extends StatelessWidget {
           : state.pendingPayments.values.first;
       return payments + state.pendingKyotaku;
     }
+    // ロンは支払候補者全員にタップ操作を表示するが、
+    // 実際に支払うのは最初に確定した一人だけなので、事前の減点表示はしない。
+    if (!state.pendingIsTsumo) return null;
     final amount = state.pendingPayments[player.uid];
     return amount == null ? null : -amount;
   }
